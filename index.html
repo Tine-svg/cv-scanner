@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CV Scanner — อัพโหลดและค้นหา</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Sukhumvit Set', 'Prompt', sans-serif;
+    background: #fafaf7;
+    color: #2c2c2a;
+    line-height: 1.6;
+    padding: 32px 20px;
+    min-height: 100vh;
+  }
+  .container { max-width: 920px; margin: 0 auto; }
+  .header { margin-bottom: 28px; }
+  .header h1 { font-size: 24px; font-weight: 500; margin-bottom: 6px; }
+  .header p { color: #5f5e5a; font-size: 14px; }
+
+  .sync-bar {
+    background: #fff;
+    border: 0.5px solid rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .sync-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: #5f5e5a;
+  }
+  .sync-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #b4b2a9;
+    flex-shrink: 0;
+  }
+  .sync-dot.connected { background: #639922; }
+  .sync-dot.syncing { background: #ef9f27; animation: pulse 1.4s ease-in-out infinite; }
+  .sync-dot.error { background: #e24b4a; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.3); }
+  }
+  .btn-link {
+    background: none;
+    border: none;
+    color: #185fa5;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .btn-link:hover { background: #e6f1fb; }
+
+  .sync-settings {
+    display: none;
+    background: #fff;
+    border: 0.5px solid rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+  .sync-settings.show { display: block; }
+  .sync-settings h3 {
+    font-size: 14px;
+    font-weight: 500;
+    color: #5f5e5a;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .sync-help {
+    font-size: 13px;
+    color: #5f5e5a;
+    margin-bottom: 12px;
+  }
+  .sync-help a { color: #185fa5; }
+  .sync-instructions {
+    display: none;
+    background: #faf9f5;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: #2c2c2a;
+    line-height: 1.7;
+  }
+  .sync-instructions.show { display: block; }
+  .sync-instructions ol {
+    margin: 0;
+    padding-left: 20px;
+  }
+  .sync-instructions li { margin-bottom: 4px; }
+  .sync-input-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .sync-input-row input,
+  .sync-input-row textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 0.5px solid rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: 'Menlo', 'Monaco', 'Consolas', monospace;
+    outline: none;
+    resize: vertical;
+    line-height: 1.5;
+  }
+  .sync-input-row input:focus,
+  .sync-input-row textarea:focus {
+    border-color: #7f77dd;
+    box-shadow: 0 0 0 3px rgba(127, 119, 221, 0.15);
+  }
+  .sync-note {
+    font-size: 12px;
+    color: #5f5e5a;
+    margin-top: 10px;
+    min-height: 16px;
+  }
+  .sync-note.error { color: #791f1f; }
+  .sync-note.success { color: #27500a; }
+
+  .upload-zone {
+    display: block;
+    background: #fff;
+    border: 2px dashed #d3d1c7;
+    border-radius: 12px;
+    padding: 40px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-bottom: 24px;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: #888780;
+    background: #f5f4ef;
+  }
+  .upload-zone .icon {
+    width: 48px; height: 48px;
+    margin: 0 auto 12px;
+    border-radius: 50%;
+    background: #eeedfe;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .upload-zone .icon svg { width: 22px; height: 22px; }
+  .upload-zone h3 { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+  .upload-zone p { color: #5f5e5a; font-size: 13px; }
+  .upload-zone input { display: none; }
+
+  .status {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .status.show { display: block; }
+  .status.loading { background: #e6f1fb; color: #0c447c; }
+  .status.error { background: #fcebeb; color: #791f1f; }
+
+  .preview-card {
+    background: #fff;
+    border: 0.5px solid rgba(0,0,0,0.15);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .preview-card.show { display: block; }
+
+  .batch-preview {
+    background: #fff;
+    border: 0.5px solid rgba(0,0,0,0.15);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .batch-preview.show { display: block; }
+  .batch-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .batch-header h3 {
+    font-size: 14px;
+    font-weight: 500;
+    color: #5f5e5a;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .batch-progress {
+    font-size: 13px;
+    color: #888780;
+  }
+  .batch-table-wrap {
+    background: #faf9f5;
+    border-radius: 8px;
+    overflow: hidden;
+    overflow-x: auto;
+    border: 0.5px solid rgba(0,0,0,0.08);
+  }
+  .batch-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 1000px;
+  }
+  .batch-table thead {
+    background: #f0eee7;
+  }
+  .batch-table th {
+    text-align: left;
+    padding: 9px 10px;
+    font-weight: 500;
+    color: #5f5e5a;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    border-bottom: 0.5px solid rgba(0,0,0,0.08);
+  }
+  .batch-table th.check-col { width: 36px; padding: 9px 6px 9px 12px; }
+  .batch-table tbody tr {
+    border-bottom: 0.5px solid rgba(0,0,0,0.05);
+    transition: background 0.1s;
+  }
+  .batch-table tbody tr:last-child { border-bottom: none; }
+  .batch-table tbody tr.unselected { opacity: 0.45; }
+  .batch-table tbody tr.error { background: rgba(160, 30, 30, 0.04); }
+  .batch-table td {
+    padding: 6px 8px;
+    vertical-align: middle;
+  }
+  .batch-table td.check-col { padding: 6px 6px 6px 12px; }
+  .batch-table td.col-filename {
+    font-size: 12px;
+    color: #5f5e5a;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .batch-table .batch-input {
+    width: 100%;
+    min-width: 90px;
+    padding: 5px 8px;
+    border: 0.5px solid transparent;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: inherit;
+    background: transparent;
+    color: #2c2c2a;
+    outline: none;
+  }
+  .batch-table .batch-input::placeholder { color: #b4b2a9; font-style: italic; }
+  .batch-table .batch-input:hover { border-color: rgba(0,0,0,0.1); background: #fff; }
+  .batch-table .batch-input:focus {
+    border-color: #7f77dd;
+    background: #fff;
+    box-shadow: 0 0 0 2px rgba(127,119,221,0.15);
+  }
+  .batch-table .row-remove {
+    background: transparent;
+    border: none;
+    color: #b4b2a9;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1;
+  }
+  .batch-table .row-remove:hover { background: #fcebeb; color: #791f1f; }
+  .batch-table .error-badge {
+    color: #791f1f;
+    font-size: 11px;
+    padding: 2px 6px;
+    background: rgba(160, 30, 30, 0.08);
+    border-radius: 4px;
+  }
+  .batch-table .loading-cell {
+    color: #888780;
+    font-style: italic;
+    font-size: 12px;
+  }
+  .batch-table tbody tr.dup {
+    background: rgba(250, 199, 117, 0.06);
+  }
+  .batch-table .dup-badge {
+    background: #faeeda;
+    color: #854f0b;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-right: 6px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .batch-table .dup-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .batch-table .dup-text {
+    font-size: 12px;
+    color: #5f5e5a;
+  }
+  .batch-table .dup-text b {
+    color: #2c2c2a;
+    font-weight: 500;
+  }
+  .batch-table .dup-action {
+    padding: 4px 8px;
+    border: 0.5px solid rgba(0,0,0,0.2);
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: inherit;
+    background: #fff;
+    color: #2c2c2a;
+    cursor: pointer;
+    outline: none;
+  }
+  .batch-table .dup-action:focus {
+    border-color: #7f77dd;
+    box-shadow: 0 0 0 2px rgba(127,119,221,0.15);
+  }
+  .preview-card h3 {
+    font-size: 14px;
+    font-weight: 500;
+    color: #5f5e5a;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .file-info {
+    background: #f5f4ef;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: #5f5e5a;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .file-info .file-name {
+    font-weight: 500;
+    color: #2c2c2a;
+    word-break: break-all;
+  }
+  .file-info .dot { color: #d3d1c7; }
+  .file-info .upload-time { color: #888780; }
+  .file-link-btn {
+    background: #e6f1fb;
+    color: #185fa5;
+    border: none;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .file-link-btn:hover { background: #b5d4f4; color: #0c447c; }
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .field {
+    background: #faf9f5;
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .field label {
+    display: block;
+    font-size: 11px;
+    color: #888780;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .field input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 500;
+    color: #2c2c2a;
+    outline: none;
+    font-family: inherit;
+  }
+  .field input:focus { color: #185fa5; }
+  .field.empty input { color: #b4b2a9; font-style: italic; font-weight: 400; }
+
+  .field-note {
+    margin-bottom: 16px;
+  }
+  .field-note textarea {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    color: #2c2c2a;
+    outline: none;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 38px;
+    line-height: 1.5;
+  }
+  .field-note textarea:focus { color: #185fa5; }
+
+  .button-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn {
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 0.5px solid rgba(0,0,0,0.2);
+    background: #fff;
+    color: #2c2c2a;
+    transition: all 0.1s;
+    font-family: inherit;
+  }
+  .btn:hover { background: #f5f4ef; }
+  .btn:active { transform: scale(0.98); }
+  .btn.primary {
+    background: #2c2c2a;
+    color: #fff;
+    border-color: #2c2c2a;
+  }
+  .btn.primary:hover { background: #444441; }
+  .btn.danger { color: #791f1f; }
+
+  .search-section { margin-top: 32px; }
+  .search-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .search-header h2 { font-size: 18px; font-weight: 500; }
+  .count-badge {
+    background: #eeedfe;
+    color: #3c3489;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .search-box {
+    width: 100%;
+    padding: 11px 16px;
+    border-radius: 8px;
+    border: 0.5px solid rgba(0,0,0,0.2);
+    font-size: 14px;
+    background: #fff;
+    outline: none;
+    font-family: inherit;
+    margin-bottom: 16px;
+  }
+  .search-box:focus { box-shadow: 0 0 0 3px rgba(127, 119, 221, 0.2); border-color: #7f77dd; }
+
+  .results-wrap {
+    background: #fff;
+    border: 0.5px solid rgba(0,0,0,0.15);
+    border-radius: 12px;
+    overflow: hidden;
+    overflow-x: auto;
+  }
+  .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 840px;
+  }
+  .results-table thead {
+    background: #f5f4ef;
+    border-bottom: 0.5px solid rgba(0,0,0,0.1);
+  }
+  .results-table th {
+    text-align: left;
+    padding: 10px 14px;
+    font-weight: 500;
+    color: #5f5e5a;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .results-table tbody tr {
+    border-bottom: 0.5px solid rgba(0,0,0,0.06);
+    transition: background 0.1s;
+  }
+  .results-table tbody tr:last-child { border-bottom: none; }
+  .results-table tbody tr:hover { background: #faf9f5; }
+  .results-table td {
+    padding: 12px 14px;
+    vertical-align: middle;
+  }
+  .results-table td.col-name {
+    font-weight: 500;
+    color: #2c2c2a;
+  }
+  .results-table td.col-date {
+    color: #888780;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .results-table td.col-empty { color: #b4b2a9; }
+  .results-table .col-note { min-width: 160px; }
+  .results-table .note-input {
+    width: 100%;
+    min-width: 140px;
+    padding: 5px 8px;
+    border: 0.5px solid transparent;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: inherit;
+    background: transparent;
+    color: #2c2c2a;
+    outline: none;
+    transition: all 0.1s;
+  }
+  .results-table .note-input::placeholder { color: #b4b2a9; font-style: italic; }
+  .results-table .note-input:hover { border-color: rgba(0,0,0,0.1); background: #faf9f5; }
+  .results-table .note-input:focus {
+    border-color: #7f77dd;
+    background: #fff;
+    box-shadow: 0 0 0 2px rgba(127,119,221,0.15);
+  }
+  .results-table mark { background: #fac775; padding: 0 2px; border-radius: 2px; }
+  .results-table .name-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .avatar-sm {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: #eeedfe;
+    color: #3c3489;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 500; font-size: 12px;
+    flex-shrink: 0;
+  }
+  .actions-cell {
+    white-space: nowrap;
+    text-align: right;
+  }
+  .action-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+    margin-left: 2px;
+  }
+  .edit-btn { color: #5f5e5a; }
+  .edit-btn:hover { background: #eeedfe; color: #3c3489; }
+  .view-btn { color: #185fa5; }
+  .view-btn:hover { background: #e6f1fb; color: #0c447c; }
+  .delete-btn { color: #b4b2a9; }
+  .delete-btn:hover { background: #fcebeb; color: #791f1f; }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #888780;
+    font-size: 14px;
+    background: #fff;
+    border: 0.5px solid rgba(0,0,0,0.15);
+    border-radius: 12px;
+  }
+
+  /* ===== Modal ===== */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-content {
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 1000px;
+    height: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.1);
+    background: #fafaf7;
+    flex-shrink: 0;
+  }
+  .modal-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #2c2c2a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .modal-btn {
+    background: #fff;
+    border: 0.5px solid rgba(0, 0, 0, 0.2);
+    color: #2c2c2a;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .modal-btn:hover { background: #f5f4ef; }
+  .modal-close {
+    background: transparent;
+    border: none;
+    color: #5f5e5a;
+    font-size: 24px;
+    line-height: 1;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+  }
+  .modal-close:hover { background: #f5f4ef; color: #2c2c2a; }
+  .modal-body {
+    flex: 1;
+    overflow: auto;
+    background: #f5f4ef;
+  }
+  .modal-body iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #fff;
+  }
+  .pdf-pages {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .pdf-page {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: #fff;
+    border-radius: 4px;
+  }
+  .pdf-loading, .pdf-error {
+    padding: 40px 20px;
+    text-align: center;
+    color: #5f5e5a;
+    font-size: 14px;
+  }
+  .pdf-error { color: #791f1f; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>CV Scanner</h1>
+    <p>อัพโหลด PDF หรือ Word — ระบบจะดึงข้อมูลให้ตรวจสอบก่อนบันทึก</p>
+  </div>
+
+  <div class="sync-bar" id="syncBar">
+    <div class="sync-status">
+      <span class="sync-dot connected"></span>
+      <span id="syncMessage">ข้อมูลเก็บในเบราว์เซอร์ของคุณ</span>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn-link" id="exportBtn">ส่งออก JSON</button>
+      <button class="btn-link" id="importBtn">นำเข้า JSON</button>
+      <input type="file" id="importInput" accept=".json" style="display:none;" />
+    </div>
+  </div>
+
+  <label class="upload-zone" id="uploadZone">
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#3c3489" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+    </div>
+    <h3>คลิกหรือลากไฟล์มาวางที่นี่</h3>
+    <p>รองรับ PDF และ Word (.docx) — เลือกได้หลายไฟล์พร้อมกัน, ขนาดไฟล์ละไม่เกิน 10MB</p>
+    <input type="file" id="fileInput" accept=".pdf,.docx" multiple />
+  </label>
+
+  <div class="status" id="status"></div>
+
+  <div class="batch-preview" id="batchPreview">
+    <div class="batch-header">
+      <h3 id="batchTitle">ตรวจสอบข้อมูลก่อนบันทึก</h3>
+      <span class="batch-progress" id="batchProgress"></span>
+    </div>
+    <div class="batch-table-wrap">
+      <table class="batch-table">
+        <thead>
+          <tr>
+            <th class="check-col"><input type="checkbox" id="batchSelectAll" checked /></th>
+            <th>ชื่อไฟล์</th>
+            <th>ชื่อ-นามสกุล</th>
+            <th>ตำแหน่ง</th>
+            <th>Email</th>
+            <th>เบอร์โทร</th>
+            <th>อายุ</th>
+            <th>เพศ</th>
+            <th>โน้ต</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="batchTbody"></tbody>
+      </table>
+    </div>
+    <div class="button-row" style="margin-top: 16px;">
+      <button class="btn primary" id="batchConfirmBtn">บันทึกทั้งหมด</button>
+      <button class="btn danger" id="batchCancelBtn">ยกเลิกทั้งหมด</button>
+    </div>
+  </div>
+
+  <div class="preview-card" id="previewCard">
+    <h3 id="previewTitle">ตรวจสอบข้อมูลที่สแกนได้</h3>
+    <div class="file-info" id="fileInfo"></div>
+    <div class="field-grid">
+      <div class="field" id="f-name">
+        <label>ชื่อ-นามสกุล</label>
+        <input type="text" id="i-name" placeholder="ไม่พบข้อมูล" />
+      </div>
+      <div class="field" id="f-position">
+        <label>ตำแหน่ง/อาชีพ</label>
+        <input type="text" id="i-position" placeholder="ไม่พบข้อมูล" />
+      </div>
+      <div class="field" id="f-email">
+        <label>Email</label>
+        <input type="text" id="i-email" placeholder="ไม่พบข้อมูล" />
+      </div>
+      <div class="field" id="f-phone">
+        <label>เบอร์โทร</label>
+        <input type="text" id="i-phone" placeholder="ไม่พบข้อมูล" />
+      </div>
+      <div class="field" id="f-age">
+        <label>อายุ</label>
+        <input type="text" id="i-age" placeholder="ไม่พบข้อมูล" />
+      </div>
+      <div class="field" id="f-gender">
+        <label>เพศ</label>
+        <input type="text" id="i-gender" placeholder="ไม่พบข้อมูล" />
+      </div>
+    </div>
+    <div class="field field-note" id="f-note">
+      <label>โน้ต (ตำแหน่งงาน, การนัดสัมภาษณ์, สถานะ...)</label>
+      <textarea id="i-note" rows="2" placeholder="พิมพ์โน้ตเกี่ยวกับผู้สมัครคนนี้..."></textarea>
+    </div>
+    <div class="button-row">
+      <button class="btn primary" id="confirmBtn">ยืนยันและบันทึก</button>
+      <button class="btn danger" id="cancelBtn">ยกเลิก</button>
+    </div>
+  </div>
+
+  <div class="search-section">
+    <div class="search-header">
+      <h2>รายชื่อที่บันทึกไว้</h2>
+      <span class="count-badge" id="countBadge">0 คน</span>
+    </div>
+    <input type="text" class="search-box" id="searchBox" placeholder="ค้นหาด้วยชื่อ, ตำแหน่ง, email, เบอร์, อายุ, เพศ, โน้ต, วันที่..." />
+    <div id="results"></div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="fileModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span>📄</span>
+        <span id="modalFileName">ไฟล์</span>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn" id="modalDownload" title="ดาวน์โหลด">⬇ ดาวน์โหลด</button>
+        <button class="modal-close" id="modalClose" title="ปิด (ESC)">×</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <iframe id="modalIframe" src="about:blank"></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  const state = {
+    records: [],
+    pending: null,
+    editingId: null,
+    db: null   // IndexedDB instance
+  };
+
+  const $ = id => document.getElementById(id);
+  const uploadZone = $('uploadZone');
+  const fileInput = $('fileInput');
+  const statusEl = $('status');
+  const previewCard = $('previewCard');
+
+  // ===== IndexedDB storage =====
+  // Schema:
+  //   - 'records' store: metadata ของ CV (key = id)
+  //   - 'files' store: ไฟล์ Blob (key = id, value = { blob, fileName, fileType })
+
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('cvScannerDB', 1);
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => resolve(req.result);
+      req.onupgradeneeded = ev => {
+        const db = ev.target.result;
+        if (!db.objectStoreNames.contains('records')) {
+          db.createObjectStore('records', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('files')) {
+          db.createObjectStore('files', { keyPath: 'id' });
+        }
+      };
+    });
+  }
+
+  function dbTx(storeName, mode = 'readonly') {
+    return state.db.transaction(storeName, mode).objectStore(storeName);
+  }
+
+  function dbReq(req) {
+    return new Promise((resolve, reject) => {
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function saveRecordToDB(record) {
+    // แยก file ออก เพื่อเก็บใน store ต่างหาก
+    const { file, ...meta } = record;
+    // เก็บ uploadedAt เป็น ISO string เพื่อ serialize ใน JSON ได้
+    if (meta.uploadedAt instanceof Date) {
+      meta.uploadedAt = meta.uploadedAt.toISOString();
+    }
+    await dbReq(dbTx('records', 'readwrite').put(meta));
+    if (file) {
+      await dbReq(dbTx('files', 'readwrite').put({
+        id: record.id,
+        blob: file,
+        fileName: record.fileName,
+        fileType: record.fileType
+      }));
+    }
+  }
+
+  async function deleteRecordFromDB(id) {
+    await dbReq(dbTx('records', 'readwrite').delete(id));
+    await dbReq(dbTx('files', 'readwrite').delete(id));
+  }
+
+  async function loadAllFromDB() {
+    const records = await dbReq(dbTx('records').getAll());
+    // เรียงจากใหม่ไปเก่า
+    records.sort((a, b) => {
+      const ta = new Date(a.uploadedAt).getTime();
+      const tb = new Date(b.uploadedAt).getTime();
+      return tb - ta;
+    });
+    return records.map(r => ({
+      ...r,
+      uploadedAt: r.uploadedAt ? new Date(r.uploadedAt) : new Date(),
+      file: null  // โหลด lazy ตอนกดดู
+    }));
+  }
+
+  async function loadFileFromDB(id) {
+    const fileRecord = await dbReq(dbTx('files').get(id));
+    if (!fileRecord) return null;
+    // คืน File object เพื่อใช้กับ pdf.js + download
+    return new File([fileRecord.blob], fileRecord.fileName, { type: fileRecord.blob.type });
+  }
+
+  async function initStorage() {
+    try {
+      state.db = await openDB();
+      state.records = await loadAllFromDB();
+      renderResults();
+      $('syncMessage').textContent = `ข้อมูลเก็บในเบราว์เซอร์ของคุณ · ${state.records.length} รายการ`;
+    } catch (err) {
+      console.error('IndexedDB error:', err);
+      $('syncMessage').textContent = 'เก็บข้อมูลไม่ได้: ' + err.message;
+    }
+  }
+
+  // ===== Export / Import JSON =====
+  $('exportBtn').addEventListener('click', async () => {
+    if (state.records.length === 0) {
+      showStatus('ยังไม่มีข้อมูลให้ส่งออก', 'error');
+      setTimeout(hideStatus, 2000);
+      return;
+    }
+    const data = state.records.map(r => ({
+      ...r,
+      uploadedAt: r.uploadedAt instanceof Date ? r.uploadedAt.toISOString() : r.uploadedAt,
+      file: undefined  // ไฟล์ไม่ถูกส่งออก
+    }));
+    const json = JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), records: data }, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cv-data-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showStatus(`ส่งออก ${data.length} รายการเรียบร้อย`, 'loading');
+    setTimeout(hideStatus, 2000);
+  });
+
+  $('importBtn').addEventListener('click', () => $('importInput').click());
+
+  $('importInput').addEventListener('change', async ev => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const records = data.records || [];
+      if (!Array.isArray(records)) throw new Error('รูปแบบไฟล์ไม่ถูกต้อง');
+
+      let added = 0, skipped = 0;
+      for (const r of records) {
+        if (!r.id) continue;
+        // ข้ามถ้า id ซ้ำ
+        if (state.records.some(x => x.id === r.id)) {
+          skipped++;
+          continue;
+        }
+        const newRecord = {
+          ...r,
+          uploadedAt: r.uploadedAt ? new Date(r.uploadedAt) : new Date(),
+          file: null
+        };
+        state.records.unshift(newRecord);
+        await saveRecordToDB(newRecord);
+        added++;
+      }
+      renderResults();
+      let msg = `นำเข้า ${added} รายการ`;
+      if (skipped) msg += ` · ข้าม ${skipped} (ซ้ำกับที่มีอยู่)`;
+      showStatus(msg, 'loading');
+      setTimeout(hideStatus, 2500);
+      $('syncMessage').textContent = `ข้อมูลเก็บในเบราว์เซอร์ของคุณ · ${state.records.length} รายการ`;
+    } catch (err) {
+      showStatus('นำเข้าไม่ได้: ' + err.message, 'error');
+      setTimeout(hideStatus, 2500);
+    }
+    ev.target.value = '';
+  });
+
+  // เริ่มต้น: เปิด IndexedDB และโหลดข้อมูล
+  initStorage();
+
+  // ===== Drag & drop =====
+  ['dragenter', 'dragover'].forEach(e => {
+    uploadZone.addEventListener(e, ev => {
+      ev.preventDefault(); uploadZone.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach(e => {
+    uploadZone.addEventListener(e, ev => {
+      ev.preventDefault(); uploadZone.classList.remove('dragover');
+    });
+  });
+  uploadZone.addEventListener('drop', ev => {
+    if (ev.dataTransfer.files.length) handleFiles(ev.dataTransfer.files);
+  });
+  fileInput.addEventListener('change', ev => {
+    if (ev.target.files.length) handleFiles(ev.target.files);
+  });
+
+  // ===== Status helpers =====
+  function showStatus(msg, type = 'loading') {
+    statusEl.className = `status show ${type}`;
+    statusEl.textContent = msg;
+  }
+  function hideStatus() { statusEl.className = 'status'; }
+
+  // ===== File handling (batch) =====
+  // pendingBatch: array of { id, file, fileName, uploadedAt, status, name, email, phone, age, gender, note, selected, error }
+  state.pendingBatch = [];
+
+  async function handleFiles(fileList) {
+    // คัดลอก files ออกมาก่อน เพราะ fileList เป็น live reference
+    const files = Array.from(fileList);
+    if (files.length === 0) return;
+
+    // เคลียร์โหมดแก้ไข (ถ้ามี) — หลังจาก copy files แล้ว
+    state.editingId = null;
+    hidePreview();
+
+    // เริ่ม batch ใหม่ (ทับของเก่า)
+    state.pendingBatch = files.map((file, i) => ({
+      id: `b${Date.now()}_${i}`,
+      file,
+      fileName: file.name,
+      uploadedAt: new Date(),
+      status: 'pending', // pending | processing | done | error
+      name: '', position: '', email: '', phone: '', age: '', gender: '', note: '',
+      selected: true,
+      error: null
+    }));
+
+    showBatchPreview();
+    // เคลียร์ input ทันที เพื่อให้เลือกไฟล์เดียวกันซ้ำได้ในครั้งถัดไป
+    fileInput.value = '';
+
+    // ประมวลผลทีละไฟล์ (เพื่อไม่ให้ browser ค้าง)
+    let done = 0;
+    for (const item of state.pendingBatch) {
+      item.status = 'processing';
+      updateBatchRow(item.id);
+
+      try {
+        if (item.file.size > 10 * 1024 * 1024) {
+          throw new Error('ไฟล์ใหญ่เกิน 10MB');
+        }
+        const ext = item.file.name.toLowerCase().split('.').pop();
+        if (!['pdf', 'docx'].includes(ext)) {
+          throw new Error('รองรับเฉพาะ PDF และ .docx');
+        }
+        // คำนวณ hash จากเนื้อหาไฟล์ (จับซ้ำแม้เปลี่ยนชื่อ)
+        item.hash = await hashFile(item.file);
+        const text = ext === 'pdf' ? await readPDF(item.file) : await readDOCX(item.file);
+        const extracted = extractFields(text);
+        Object.assign(item, extracted);
+        item.status = 'done';
+
+        // เช็คซ้ำ: กับ records ที่บันทึกแล้ว และกับ batch ก่อนหน้า
+        const dupInRecords = state.records.find(r => r.hash === item.hash);
+        const dupInBatch = state.pendingBatch.find(
+          x => x !== item && x.hash === item.hash && x.status === 'done'
+        );
+        if (dupInRecords) {
+          item.duplicate = { type: 'records', id: dupInRecords.id, name: dupInRecords.name };
+          item.action = 'skip'; // default: ข้าม
+          item.selected = false;
+        } else if (dupInBatch) {
+          item.duplicate = { type: 'batch', id: dupInBatch.id, name: dupInBatch.name };
+          item.action = 'skip';
+          item.selected = false;
+        }
+      } catch (err) {
+        item.status = 'error';
+        item.error = err.message;
+        item.selected = false; // unselect ไฟล์ที่ error อัตโนมัติ
+      }
+
+      done++;
+      updateBatchRow(item.id);
+      updateBatchProgress(done);
+    }
+  }
+
+  // SHA-256 hash ของเนื้อหาไฟล์
+  async function hashFile(file) {
+    const buf = await file.arrayBuffer();
+    const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(hashBuf))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function showBatchPreview() {
+    $('batchTitle').textContent = `ตรวจสอบข้อมูลก่อนบันทึก (${state.pendingBatch.length} ไฟล์)`;
+    $('batchProgress').textContent = `0/${state.pendingBatch.length} ไฟล์`;
+    renderBatchTable();
+    $('batchPreview').classList.add('show');
+    $('batchPreview').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function hideBatchPreview() {
+    $('batchPreview').classList.remove('show');
+    state.pendingBatch = [];
+    fileInput.value = ''; // เคลียร์ input เพื่อให้เลือกไฟล์เดิมซ้ำได้
+  }
+
+  function renderBatchTable() {
+    const tbody = $('batchTbody');
+    tbody.innerHTML = state.pendingBatch.map(item => batchRowHtml(item)).join('');
+  }
+
+  function batchRowHtml(item) {
+    const cls = [
+      !item.selected && 'unselected',
+      item.status === 'error' && 'error'
+    ].filter(Boolean).join(' ');
+
+    if (item.status === 'pending' || item.status === 'processing') {
+      return `
+        <tr id="row-${item.id}" class="${cls}">
+          <td class="check-col"></td>
+          <td class="col-filename" title="${escapeHtml(item.fileName)}">${escapeHtml(item.fileName)}</td>
+          <td colspan="7" class="loading-cell">${item.status === 'processing' ? 'กำลังสแกน...' : 'รอ...'}</td>
+          <td><button class="row-remove" onclick="removeBatchRow('${item.id}')" title="ลบ">×</button></td>
+        </tr>
+      `;
+    }
+
+    if (item.status === 'error') {
+      return `
+        <tr id="row-${item.id}" class="${cls}">
+          <td class="check-col"></td>
+          <td class="col-filename" title="${escapeHtml(item.fileName)}">${escapeHtml(item.fileName)}</td>
+          <td colspan="7"><span class="error-badge">${escapeHtml(item.error || 'ไม่ทราบข้อผิดพลาด')}</span></td>
+          <td><button class="row-remove" onclick="removeBatchRow('${item.id}')" title="ลบ">×</button></td>
+        </tr>
+      `;
+    }
+
+    // status === 'done'
+    const inp = (field, placeholder) =>
+      `<input class="batch-input" data-id="${item.id}" data-field="${field}"
+        value="${escapeHtml(item[field] || '')}" placeholder="${placeholder}" />`;
+
+    // Duplicate row — แสดงแถวพิเศษให้ผู้ใช้เลือก action
+    if (item.duplicate) {
+      const dupName = item.duplicate.name || '(ไม่ระบุ)';
+      const isFromRecords = item.duplicate.type === 'records';
+      const replaceOption = isFromRecords
+        ? `<option value="replace" ${item.action === 'replace' ? 'selected' : ''}>แทนที่ของเก่า</option>`
+        : '';
+      return `
+        <tr id="row-${item.id}" class="${cls} dup">
+          <td class="check-col">
+            <input type="checkbox" class="batch-check" data-id="${item.id}" ${item.selected ? 'checked' : ''} />
+          </td>
+          <td class="col-filename" title="${escapeHtml(item.fileName)}">
+            <span class="dup-badge">ซ้ำ</span>
+            ${escapeHtml(item.fileName)}
+          </td>
+          <td colspan="7">
+            <div class="dup-info">
+              <span class="dup-text">เคย${isFromRecords ? 'บันทึกแล้ว' : 'อยู่ใน batch นี้แล้ว'}: <b>${escapeHtml(dupName)}</b></span>
+              <select class="dup-action" data-id="${item.id}">
+                <option value="skip" ${item.action === 'skip' ? 'selected' : ''}>ข้าม (ไม่บันทึก)</option>
+                ${replaceOption}
+                <option value="add" ${item.action === 'add' ? 'selected' : ''}>เพิ่มเป็นรายการใหม่</option>
+              </select>
+            </div>
+          </td>
+          <td><button class="row-remove" onclick="removeBatchRow('${item.id}')" title="ลบ">×</button></td>
+        </tr>
+      `;
+    }
+
+    return `
+      <tr id="row-${item.id}" class="${cls}">
+        <td class="check-col">
+          <input type="checkbox" class="batch-check" data-id="${item.id}" ${item.selected ? 'checked' : ''} />
+        </td>
+        <td class="col-filename" title="${escapeHtml(item.fileName)}">${escapeHtml(item.fileName)}</td>
+        <td>${inp('name', 'ไม่พบ')}</td>
+        <td>${inp('position', 'ไม่พบ')}</td>
+        <td>${inp('email', 'ไม่พบ')}</td>
+        <td>${inp('phone', 'ไม่พบ')}</td>
+        <td>${inp('age', 'ไม่พบ')}</td>
+        <td>${inp('gender', 'ไม่พบ')}</td>
+        <td>${inp('note', 'เพิ่มโน้ต...')}</td>
+        <td><button class="row-remove" onclick="removeBatchRow('${item.id}')" title="ลบ">×</button></td>
+      </tr>
+    `;
+  }
+
+  function updateBatchRow(id) {
+    const item = state.pendingBatch.find(x => x.id === id);
+    if (!item) return;
+    const row = document.getElementById('row-' + id);
+    if (!row) return;
+    row.outerHTML = batchRowHtml(item);
+  }
+
+  function updateBatchProgress(done) {
+    const total = state.pendingBatch.length;
+    const ok = state.pendingBatch.filter(x => x.status === 'done').length;
+    const err = state.pendingBatch.filter(x => x.status === 'error').length;
+    let txt = `${done}/${total} ไฟล์`;
+    if (done === total) {
+      txt = `เสร็จสิ้น · ${ok} สำเร็จ`;
+      if (err > 0) txt += ` · ${err} ล้มเหลว`;
+    }
+    $('batchProgress').textContent = txt;
+  }
+
+  // Event delegation: handle input/checkbox changes inside batch table
+  $('batchTbody').addEventListener('input', ev => {
+    const t = ev.target;
+    if (t.classList.contains('batch-input')) {
+      const item = state.pendingBatch.find(x => x.id === t.dataset.id);
+      if (item) item[t.dataset.field] = t.value;
+    }
+  });
+
+  $('batchTbody').addEventListener('change', ev => {
+    const t = ev.target;
+    if (t.classList.contains('batch-check')) {
+      const item = state.pendingBatch.find(x => x.id === t.dataset.id);
+      if (item) {
+        item.selected = t.checked;
+        const row = document.getElementById('row-' + item.id);
+        if (row) row.classList.toggle('unselected', !item.selected);
+        updateSelectAllCheckbox();
+      }
+    } else if (t.classList.contains('dup-action')) {
+      const item = state.pendingBatch.find(x => x.id === t.dataset.id);
+      if (item) {
+        item.action = t.value;
+        // auto-update selected: skip = ไม่เลือก, replace/add = เลือก
+        item.selected = (t.value !== 'skip');
+        updateBatchRow(item.id);
+        updateSelectAllCheckbox();
+      }
+    }
+  });
+
+  $('batchSelectAll').addEventListener('change', ev => {
+    const checked = ev.target.checked;
+    state.pendingBatch.forEach(item => {
+      if (item.status === 'done') item.selected = checked;
+    });
+    renderBatchTable();
+  });
+
+  function updateSelectAllCheckbox() {
+    const eligible = state.pendingBatch.filter(x => x.status === 'done');
+    if (eligible.length === 0) return;
+    const allSelected = eligible.every(x => x.selected);
+    $('batchSelectAll').checked = allSelected;
+  }
+
+  window.removeBatchRow = function(id) {
+    state.pendingBatch = state.pendingBatch.filter(x => x.id !== id);
+    if (state.pendingBatch.length === 0) {
+      hideBatchPreview();
+    } else {
+      renderBatchTable();
+      $('batchTitle').textContent = `ตรวจสอบข้อมูลก่อนบันทึก (${state.pendingBatch.length} ไฟล์)`;
+    }
+  };
+
+  $('batchConfirmBtn').addEventListener('click', async () => {
+    const toSave = state.pendingBatch.filter(x => x.status === 'done' && x.selected);
+    if (toSave.length === 0) {
+      showStatus('ไม่มีรายการที่เลือกไว้', 'error');
+      return;
+    }
+    const skipped = [];
+    let saved = 0;
+    let replaced = 0;
+    const newRecords = [];
+    const updatedRecords = [];
+
+    toSave.forEach((item, i) => {
+      const name = (item.name || '').trim();
+      const email = (item.email || '').trim();
+      const phone = (item.phone || '').trim();
+      if (!name && !email && !phone) {
+        skipped.push(item.fileName);
+        return;
+      }
+
+      const fileType = item.file.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'docx';
+      const recordData = {
+        name,
+        position: (item.position || '').trim(),
+        email, phone,
+        age: (item.age || '').trim(),
+        gender: (item.gender || '').trim(),
+        note: (item.note || '').trim(),
+        fileName: item.fileName,
+        file: item.file,
+        fileType,
+        uploadedAt: item.uploadedAt,
+        hash: item.hash
+      };
+
+      if (item.duplicate?.type === 'records' && item.action === 'replace') {
+        const idx = state.records.findIndex(r => r.id === item.duplicate.id);
+        if (idx !== -1) {
+          state.records[idx] = { ...state.records[idx], ...recordData };
+          updatedRecords.push(state.records[idx]);
+          replaced++;
+          return;
+        }
+      }
+
+      const newRecord = { id: 'r' + Date.now() + '_' + i, ...recordData };
+      state.records.unshift(newRecord);
+      newRecords.push(newRecord);
+      saved++;
+    });
+
+    hideBatchPreview();
+    renderResults();
+
+    // เก็บลง IndexedDB
+    for (const r of newRecords) await saveRecordToDB(r);
+    for (const r of updatedRecords) await saveRecordToDB(r);
+    $('syncMessage').textContent = `ข้อมูลเก็บในเบราว์เซอร์ของคุณ · ${state.records.length} รายการ`;
+
+    const parts = [];
+    if (saved) parts.push(`บันทึก ${saved} รายการ`);
+    if (replaced) parts.push(`อัพเดต ${replaced} รายการ`);
+    if (skipped.length) parts.push(`ข้าม ${skipped.length} ไฟล์ (ข้อมูลไม่พอ)`);
+    showStatus(parts.join(' · ') || 'ไม่มีการเปลี่ยนแปลง', 'loading');
+    setTimeout(hideStatus, 2500);
+  });
+
+  $('batchCancelBtn').addEventListener('click', hideBatchPreview);
+
+  async function readPDF(file) {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let text = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      // จัดกลุ่ม items เป็นบรรทัด โดยดูที่ y-coordinate (transform[5])
+      let lastY = null;
+      let line = '';
+      for (const item of content.items) {
+        const y = item.transform[5];
+        if (lastY !== null && Math.abs(y - lastY) > 2) {
+          if (line.trim()) text += line.trim() + '\n';
+          line = '';
+        }
+        line += item.str + ' ';
+        lastY = y;
+      }
+      if (line.trim()) text += line.trim() + '\n';
+      text += '\n';
+    }
+    return text;
+  }
+
+  async function readDOCX(file) {
+    const buf = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer: buf });
+    return result.value;
+  }
+
+  // ===== Field extraction =====
+  function extractFields(text) {
+    return {
+      name: extractName(text),
+      position: extractPosition(text),
+      email: extractEmail(text),
+      phone: extractPhone(text),
+      age: extractAge(text),
+      gender: extractGender(text)
+    };
+  }
+
+  function extractEmail(text) {
+    const m = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+    return m ? m[0] : '';
+  }
+
+  function extractPhone(text) {
+    // ไทย: 08x-xxx-xxxx, 02-xxx-xxxx, +66, etc.
+    const patterns = [
+      /(?:\+66|0)\s?\d{1,2}[\s\-.]?\d{3,4}[\s\-.]?\d{3,4}/,
+      /\d{3}[\s\-.]\d{3}[\s\-.]\d{4}/,
+      /\+\d{1,3}\s?\d{6,12}/
+    ];
+    for (const p of patterns) {
+      const m = text.match(p);
+      if (m) return m[0].trim();
+    }
+    return '';
+  }
+
+  function extractAge(text) {
+    // อายุ XX ปี / Age: XX / XX years old
+    const patterns = [
+      /อายุ\s*[:\-]?\s*(\d{1,3})\s*ปี/,
+      /อายุ\s*[:\-]?\s*(\d{1,3})/,
+      /Age\s*[:\-]?\s*(\d{1,3})/i,
+      /(\d{1,3})\s*years?\s*old/i,
+      /(\d{1,3})\s*yrs?/i
+    ];
+    for (const p of patterns) {
+      const m = text.match(p);
+      if (m && +m[1] >= 15 && +m[1] <= 99) return m[1] + ' ปี';
+    }
+    return '';
+  }
+
+  function extractGender(text) {
+    const lower = text.toLowerCase();
+    // ไทย
+    if (/เพศ\s*[:\-]?\s*ชาย/.test(text) || /\bนาย\b/.test(text)) return 'ชาย';
+    if (/เพศ\s*[:\-]?\s*หญิง/.test(text) || /\b(นาง|นางสาว|น\.ส\.)\b/.test(text)) return 'หญิง';
+    // อังกฤษ
+    if (/gender\s*[:\-]?\s*male/i.test(text) || /\bsex\s*[:\-]?\s*male/i.test(text)) return 'ชาย';
+    if (/gender\s*[:\-]?\s*female/i.test(text) || /\bsex\s*[:\-]?\s*female/i.test(text)) return 'หญิง';
+    if (/\b(mr\.?)\b/i.test(text)) return 'ชาย';
+    if (/\b(ms\.?|mrs\.?|miss)\b/i.test(text)) return 'หญิง';
+    return '';
+  }
+
+  function extractName(text) {
+    // กรองบรรทัดเลขล้วน, สั้นเกินไป, หรือว่างออก
+    const lines = text.split(/\n|\r/)
+      .map(l => l.trim())
+      .filter(l => l && !/^\d+$/.test(l));
+
+    // 1. หาคำนำหน้าไทย (priority สูงสุด)
+    for (const line of lines.slice(0, 30)) {
+      const m = line.match(/(?:นาย|นางสาว|นาง|น\.ส\.)\s*([\u0E00-\u0E7F]+(?:\s+[\u0E00-\u0E7F]+)+)/);
+      if (m) return m[0].replace(/\s+/g, ' ').trim();
+    }
+
+    // 2. หาคำนำหน้าอังกฤษ
+    for (const line of lines.slice(0, 30)) {
+      const m = line.match(/(?:Mr\.?|Ms\.?|Mrs\.?|Miss)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/);
+      if (m) return m[0].trim();
+    }
+
+    // 3. ชื่อ:/Name:
+    for (const line of lines.slice(0, 40)) {
+      const m = line.match(/(?:ชื่อ|Name|ชื่อ-นามสกุล|Full\s*Name)\s*[:\-]\s*(.+)/i);
+      if (m) {
+        const name = m[1].split(/\s{2,}|[|,]/)[0].trim();
+        if (name.length >= 3 && name.length <= 60) return name;
+      }
+    }
+
+    // 4. บรรทัดแรกๆ ที่ดูเหมือนชื่อ — เช็ค 8 บรรทัดแรก (กว้างขึ้นเผื่อมี header)
+    for (const line of lines.slice(0, 8)) {
+      if (line.length < 5 || line.length > 60) continue;
+      // ไทย: ตัวอักษรไทย + ช่องว่าง 2 คำขึ้นไป
+      if (/^[\u0E00-\u0E7F\s]+$/.test(line)) {
+        const words = line.split(/\s+/).filter(Boolean);
+        if (words.length >= 2 && words.length <= 4) return line.replace(/\s+/g, ' ');
+      }
+      // อังกฤษ: Title Case 2-4 คำ
+      if (/^[A-Z][a-z]+(\s+[A-Z][a-z]+){1,3}$/.test(line)) return line;
+    }
+    return '';
+  }
+
+  // ตำแหน่งที่รู้จัก (canonical form) — เรียงจากเฉพาะเจาะจงไปทั่วไป
+  const KNOWN_POSITIONS = [
+    // IT/Software (ยาวก่อน - เพื่อ match ก่อน)
+    'Full Stack Developer', 'Frontend Developer', 'Backend Developer',
+    'Mobile Developer', 'iOS Developer', 'Android Developer',
+    'Software Engineer', 'Software Developer', 'Web Developer', 'Web Designer',
+    'Data Engineer', 'Data Scientist', 'Data Analyst',
+    'DevOps Engineer', 'Cloud Engineer', 'Security Engineer',
+    'System Engineer', 'Network Engineer', 'System Administrator',
+    'Database Administrator', 'IT Support', 'IT Manager', 'IT Officer',
+    'IT Specialist', 'IT Administrator', 'Help Desk',
+    'QA Engineer', 'Test Engineer', 'Quality Assurance',
+    // Design
+    'UX Designer', 'UI Designer', 'Graphic Designer', 'Product Designer',
+    'Motion Designer', 'Interior Designer',
+    // Management
+    'Product Manager', 'Project Manager', 'Program Manager',
+    'Marketing Manager', 'Sales Manager', 'HR Manager',
+    'General Manager', 'Operations Manager', 'Account Manager',
+    // Marketing/Sales
+    'Digital Marketing', 'Content Marketing', 'Social Media Specialist',
+    'Marketing Officer', 'Sales Officer', 'Sales Executive',
+    'Business Analyst', 'Business Development',
+    // Other
+    'HR Officer', 'Accountant', 'Accounting Officer', 'Auditor',
+    'Customer Service', 'Customer Success', 'Administrative Officer',
+    // Generic fallback (สั้นสุด — ใช้เมื่อไม่มี match อื่น)
+    'Programmer', 'Developer', 'Designer', 'Analyst', 'Engineer',
+    'Consultant', 'Specialist', 'Coordinator', 'Supervisor',
+  ];
+
+  function findKnownPositions(text) {
+    const lower = text.toLowerCase();
+    const found = [];
+    for (const pos of KNOWN_POSITIONS) {
+      if (lower.includes(pos.toLowerCase())) found.push(pos);
+    }
+    // ตัดที่เป็น substring ของอันยาวกว่า (เช่น เจอทั้ง "Engineer" และ "Software Engineer" → เก็บอันหลัง)
+    return found.filter(p =>
+      !found.some(other => other !== p && other.toLowerCase().includes(p.toLowerCase()))
+    );
+  }
+
+  function extractPosition(text) {
+    const lines = text.split(/\n|\r/)
+      .map(l => l.trim())
+      .filter(l => l && !/^\d+$/.test(l));
+
+    // 1. หา keyword ตำแหน่ง:/Position:/Job Title: → ดึงค่าหลัง colon แล้ว match known positions
+    for (const line of lines.slice(0, 50)) {
+      const m = line.match(/(?:ตำแหน่ง(?:งาน)?|อาชีพ|Position|Job\s*Title|Title|Role)\s*[:\-]\s*(.+)/i);
+      if (m) {
+        const matched = findKnownPositions(m[1]);
+        if (matched.length) return matched.join(' / ');
+        // ถ้าไม่ match known แต่สั้นพอดี ใช้เป็น raw value
+        const pos = m[1].split(/\s{2,}|[|,;]/)[0].trim();
+        if (pos.length >= 2 && pos.length <= 40) return pos;
+      }
+    }
+
+    // 2. บรรทัดต้นๆ (top 10) — น่าจะเป็นบรรทัดใต้ชื่อ ที่ระบุตำแหน่ง
+    for (const line of lines.slice(0, 10)) {
+      if (line.length < 3 || line.length > 100) continue;
+      // ข้ามบรรทัดที่ดูเป็นรายละเอียดงาน (มี verb)
+      if (/(?:ให้บริการ|ดูแล|ติดตั้ง|จัดการ|ประสานงาน|provide|manage|develop|maintain|coordinate|responsible)/i.test(line)) continue;
+      const matched = findKnownPositions(line);
+      if (matched.length) return matched.join(' / ');
+    }
+
+    // 3. หา section ประสบการณ์ → match ในบรรทัดถัดๆ ไป
+    const expRegex = /^(?:EXPERIENCE|Experience|ประสบการณ์(?:ทำงาน)?|ประวัติการทำงาน|WORK\s*EXPERIENCE)/i;
+    for (let i = 0; i < lines.length; i++) {
+      if (expRegex.test(lines[i])) {
+        for (let j = i + 1; j < Math.min(i + 8, lines.length); j++) {
+          const ln = lines[j];
+          if (ln.length < 3 || ln.length > 120) continue;
+          if (/^\s*\d{4}|\b(present|now|ปัจจุบัน)\b|–|—|\bto\b/i.test(ln)) continue;
+          // ข้าม description
+          if (/(?:ให้บริการ|ดูแล|ติดตั้ง|จัดการ|provide|manage|develop|maintain)/i.test(ln)) continue;
+          const matched = findKnownPositions(ln);
+          if (matched.length) return matched.join(' / ');
+        }
+      }
+    }
+
+    return '';
+  }
+
+  // ===== Preview =====
+  function formatDateTime(date) {
+    const d = new Date(date);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear() + 543; // พ.ศ.
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+  }
+
+  function formatRelative(date) {
+    const diff = Date.now() - new Date(date).getTime();
+    const sec = Math.round(diff / 1000);
+    if (sec < 60) return 'เมื่อสักครู่';
+    const min = Math.round(sec / 60);
+    if (min < 60) return `${min} นาทีที่แล้ว`;
+    const hr = Math.round(min / 60);
+    if (hr < 24) return `${hr} ชั่วโมงที่แล้ว`;
+    const day = Math.round(hr / 24);
+    if (day < 7) return `${day} วันที่แล้ว`;
+    return formatDateTime(date);
+  }
+
+  function showPreview(data) {
+    const map = { name: 'i-name', position: 'i-position', email: 'i-email', phone: 'i-phone', age: 'i-age', gender: 'i-gender' };
+    for (const [k, id] of Object.entries(map)) {
+      const input = $(id);
+      input.value = data[k] || '';
+      $('f-' + k).classList.toggle('empty', !data[k]);
+    }
+    $('i-note').value = ''; // เริ่มใหม่ทุกครั้งที่อัพโหลด
+    // แสดงข้อมูลไฟล์ + วันที่อัพโหลด
+    const p = state.pending;
+    $('fileInfo').innerHTML = `
+      <span>📄</span>
+      <span class="file-name">${escapeHtml(p.fileName)}</span>
+      <span class="dot">·</span>
+      <span class="upload-time">อัพโหลดเมื่อ ${formatDateTime(p.uploadedAt)}</span>
+    `;
+    previewCard.classList.add('show');
+    previewCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function hidePreview() {
+    previewCard.classList.remove('show');
+    state.pending = null;
+    state.editingId = null;
+    fileInput.value = '';
+    // คืนค่า UI กลับโหมดเพิ่ม
+    $('previewTitle').textContent = 'ตรวจสอบข้อมูลที่สแกนได้';
+    $('confirmBtn').textContent = 'ยืนยันและบันทึก';
+  }
+
+  // ===== Confirm / Cancel =====
+  $('confirmBtn').addEventListener('click', async () => {
+    const data = {
+      name: $('i-name').value.trim(),
+      position: $('i-position').value.trim(),
+      email: $('i-email').value.trim(),
+      phone: $('i-phone').value.trim(),
+      age: $('i-age').value.trim(),
+      gender: $('i-gender').value.trim(),
+      note: $('i-note').value.trim()
+    };
+    if (!data.name && !data.email && !data.phone) {
+      showStatus('ต้องมีอย่างน้อย ชื่อ, email หรือเบอร์โทร', 'error');
+      return;
+    }
+
+    if (state.editingId) {
+      const idx = state.records.findIndex(r => r.id === state.editingId);
+      const editId = state.editingId;
+      if (idx !== -1) {
+        state.records[idx] = { ...state.records[idx], ...data };
+        await saveRecordToDB(state.records[idx]);
+      }
+      hidePreview();
+      showStatus('แก้ไขเรียบร้อย', 'loading');
+      renderResults();
+    } else {
+      const record = {
+        id: 'r' + Date.now(),
+        ...data,
+        fileName: state.pending?.fileName || '',
+        uploadedAt: state.pending?.uploadedAt || new Date()
+      };
+      state.records.unshift(record);
+      await saveRecordToDB(record);
+      hidePreview();
+      showStatus('บันทึกเรียบร้อย', 'loading');
+      renderResults();
+    }
+    $('syncMessage').textContent = `ข้อมูลเก็บในเบราว์เซอร์ของคุณ · ${state.records.length} รายการ`;
+    setTimeout(hideStatus, 1500);
+  });
+
+  $('cancelBtn').addEventListener('click', hidePreview);
+
+  // ===== Edit =====
+  window.editRecord = function(id) {
+    const record = state.records.find(r => r.id === id);
+    if (!record) return;
+
+    state.editingId = id;
+    state.pending = {
+      fileName: record.fileName,
+      uploadedAt: record.uploadedAt
+    };
+
+    // เติมข้อมูลลงฟอร์ม
+    const map = { name: 'i-name', position: 'i-position', email: 'i-email', phone: 'i-phone', age: 'i-age', gender: 'i-gender' };
+    for (const [k, inputId] of Object.entries(map)) {
+      const input = $(inputId);
+      input.value = record[k] || '';
+      $('f-' + k).classList.toggle('empty', !record[k]);
+    }
+    $('i-note').value = record.note || '';
+
+    // เปลี่ยน UI เป็นโหมดแก้ไข
+    $('previewTitle').textContent = 'แก้ไขข้อมูล';
+    $('confirmBtn').textContent = 'บันทึกการแก้ไข';
+    $('fileInfo').innerHTML = `
+      <span>📄</span>
+      <span class="file-name">${escapeHtml(record.fileName || '(ไม่มีไฟล์)')}</span>
+      ${record.fileName ? `<button class="file-link-btn" onclick="viewFile('${record.id}')">ดูไฟล์</button>` : ''}
+      <span class="dot">·</span>
+      <span class="upload-time">อัพโหลดเมื่อ ${formatDateTime(record.uploadedAt)}</span>
+    `;
+    previewCard.classList.add('show');
+    previewCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  // ===== Search & render =====
+  $('searchBox').addEventListener('input', renderResults);
+
+  function renderResults() {
+    const q = $('searchBox').value.trim().toLowerCase();
+    const filtered = q
+      ? state.records.filter(r =>
+          [r.name, r.position, r.email, r.phone, r.age, r.gender, r.note, r.fileName, formatDateTime(r.uploadedAt)]
+            .some(v => v && v.toLowerCase().includes(q)))
+      : state.records;
+
+    $('countBadge').textContent = `${state.records.length} คน${q ? ` · ${filtered.length} ผลลัพธ์` : ''}`;
+
+    const wrap = $('results');
+    if (state.records.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">ยังไม่มีข้อมูล — อัพโหลด CV เพื่อเริ่มต้น</div>';
+      return;
+    }
+    if (filtered.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">ไม่พบรายการที่ตรงกับ "' + escapeHtml(q) + '"</div>';
+      return;
+    }
+
+    wrap.innerHTML = `
+      <div class="results-wrap">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>ชื่อ-นามสกุล</th>
+              <th>ตำแหน่ง</th>
+              <th>Email</th>
+              <th>เบอร์โทร</th>
+              <th>อายุ</th>
+              <th>เพศ</th>
+              <th>โน้ต</th>
+              <th>วันที่อัพโหลด</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtered.map(r => {
+              const initial = (r.name || '?').trim().charAt(0).toUpperCase();
+              const dateStr = formatDateTime(r.uploadedAt);
+              const cell = (val, q) => val
+                ? highlight(val, q)
+                : '<span class="col-empty-text">—</span>';
+              return `
+                <tr>
+                  <td class="col-name">
+                    <div class="name-cell">
+                      <div class="avatar-sm">${escapeHtml(initial)}</div>
+                      <span>${highlight(r.name || '(ไม่ระบุ)', q)}</span>
+                    </div>
+                  </td>
+                  <td class="${r.position ? '' : 'col-empty'}">${cell(r.position, q)}</td>
+                  <td class="${r.email ? '' : 'col-empty'}">${cell(r.email, q)}</td>
+                  <td class="${r.phone ? '' : 'col-empty'}">${cell(r.phone, q)}</td>
+                  <td class="${r.age ? '' : 'col-empty'}">${cell(r.age, q)}</td>
+                  <td class="${r.gender ? '' : 'col-empty'}">${cell(r.gender, q)}</td>
+                  <td class="col-note">
+                    <input type="text" class="note-input"
+                      value="${escapeHtml(r.note || '')}"
+                      placeholder="เพิ่มโน้ต..."
+                      title="${escapeHtml(r.note || '')}"
+                      onchange="updateNote('${r.id}', this.value)" />
+                  </td>
+                  <td class="col-date" title="${escapeHtml(formatRelative(r.uploadedAt))}">${highlight(dateStr, q)}</td>
+                  <td class="actions-cell">
+                    ${r.fileName ? `<button class="action-btn view-btn" onclick="viewFile('${r.id}')" title="${escapeHtml(r.fileName)}">ดู</button>` : ''}
+                    <button class="action-btn edit-btn" onclick="editRecord('${r.id}')" title="แก้ไข">แก้ไข</button>
+                    <button class="action-btn delete-btn" onclick="deleteRecord('${r.id}')" title="ลบ">ลบ</button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  window.deleteRecord = async function(id) {
+    if (!confirm('ลบรายการนี้?')) return;
+    state.records = state.records.filter(r => r.id !== id);
+    renderResults();
+    await deleteRecordFromDB(id);
+    $('syncMessage').textContent = `ข้อมูลเก็บในเบราว์เซอร์ของคุณ · ${state.records.length} รายการ`;
+  };
+
+  window.viewFile = async function(id) {
+    const record = state.records.find(r => r.id === id);
+    if (!record) return;
+
+    // ถ้าไม่มี file ใน memory → โหลดจาก IndexedDB
+    if (!record.file) {
+      try {
+        const file = await loadFileFromDB(id);
+        if (!file) {
+          showStatus('ไม่พบไฟล์ต้นฉบับ', 'error');
+          setTimeout(hideStatus, 2000);
+          return;
+        }
+        record.file = file;
+      } catch (err) {
+        showStatus('โหลดไฟล์ไม่ได้: ' + err.message, 'error');
+        setTimeout(hideStatus, 2500);
+        return;
+      }
+    }
+    openFileModal(record);
+  };
+
+  function openFileModal(record) {
+    const modal = $('fileModal');
+    const fileNameEl = $('modalFileName');
+    const downloadBtn = $('modalDownload');
+    const body = modal.querySelector('.modal-body');
+
+    fileNameEl.textContent = record.fileName || 'ไฟล์';
+    fileNameEl.title = record.fileName || '';
+
+    // ตั้งค่าปุ่มดาวน์โหลด — สร้าง Blob URL ใหม่ทุกครั้ง (revoke ทันทีหลังกด)
+    downloadBtn.onclick = () => {
+      const url = URL.createObjectURL(record.file);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = record.fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+
+    if (record.fileType === 'pdf') {
+      body.innerHTML = '<div class="pdf-pages" id="pdfPages"><div class="pdf-loading">กำลังโหลด PDF...</div></div>';
+      renderPDFInModal(record.file);
+    } else {
+      body.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;color:#5f5e5a;text-align:center;padding:24px;">
+          <div style="font-size:48px;">📝</div>
+          <div style="font-size:15px;font-weight:500;color:#2c2c2a;">ไฟล์ Word ดูในเบราว์เซอร์ไม่ได้</div>
+          <div style="font-size:13px;">กดปุ่ม "ดาวน์โหลด" ด้านบนเพื่อเปิดด้วย Microsoft Word</div>
+        </div>
+      `;
+    }
+
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+
+  async function renderPDFInModal(file) {
+    try {
+      // ส่ง ArrayBuffer ตรงๆ ให้ pdf.js — ไม่ผ่าน blob URL
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const container = $('pdfPages');
+      if (!container) return; // modal ปิดไปแล้ว
+      container.innerHTML = '';
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        if (!$('pdfPages')) return; // modal ปิดระหว่าง render
+
+        const page = await pdf.getPage(i);
+        const containerWidth = container.clientWidth - 40;
+        const baseViewport = page.getViewport({ scale: 1 });
+        const scale = Math.min(2, containerWidth / baseViewport.width);
+        const viewport = page.getViewport({ scale });
+
+        const canvas = document.createElement('canvas');
+        canvas.className = 'pdf-page';
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.maxWidth = '100%';
+        canvas.style.height = 'auto';
+        container.appendChild(canvas);
+
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+      }
+    } catch (err) {
+      console.error('PDF render error:', err);
+      const container = $('pdfPages');
+      if (container) {
+        container.innerHTML = `<div class="pdf-error">โหลด PDF ไม่ได้: ${err.message}<br>ลองกดปุ่มดาวน์โหลดด้านบนแทน</div>`;
+      }
+    }
+  }
+
+  function closeFileModal() {
+    const modal = $('fileModal');
+    modal.classList.remove('show');
+    document.body.style.overflow = '';
+    // เคลียร์เนื้อหาเพื่อหยุด iframe ทำงานเบื้องหลัง
+    const body = modal.querySelector('.modal-body');
+    body.innerHTML = '';
+  }
+
+  // Event listeners สำหรับ modal
+  $('modalClose').addEventListener('click', closeFileModal);
+  $('fileModal').addEventListener('click', ev => {
+    // คลิกพื้นที่นอก modal-content → ปิด
+    if (ev.target.id === 'fileModal') closeFileModal();
+  });
+  document.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape' && $('fileModal').classList.contains('show')) {
+      closeFileModal();
+    }
+  });
+
+  window.updateNote = async function(id, value) {
+    const record = state.records.find(r => r.id === id);
+    if (record) {
+      record.note = value.trim();
+      event.target.title = record.note;
+      await saveRecordToDB(record);
+    }
+  };
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function highlight(text, q) {
+    const safe = escapeHtml(text);
+    if (!q) return safe;
+    const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    return safe.replace(re, '<mark>$1</mark>');
+  }
+
+  renderResults();
+</script>
+</body>
+</html>
