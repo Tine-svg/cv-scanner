@@ -964,8 +964,10 @@
 
       // อัพโหลดไฟล์ไป Storage (ถ้ามี)
       if (record.file) {
-        // path: <id>/<fileName>
-        filePath = `${record.id}/${record.fileName}`;
+        // ใช้แค่ extension จากชื่อไฟล์ — ส่วนชื่ออื่นใช้ id (เป็น ASCII)
+        // เพราะ Supabase Storage ไม่รับ key ที่มีตัวอักษรไทย/Unicode
+        const ext = record.fileName.toLowerCase().endsWith('.pdf') ? 'pdf' : 'docx';
+        filePath = `${record.id}/file.${ext}`;
         const { error: upErr } = await state.supabase.storage
           .from('cv-files')
           .upload(filePath, record.file, { upsert: true });
