@@ -696,10 +696,14 @@
     font-size: 12px;
     color: var(--text-secondary);
     transition: all var(--transition-fast);
+    cursor: pointer;
+    font-family: inherit;
   }
   .uploader-pill:hover {
     background: var(--bg-elevated);
-    border-color: var(--border-default);
+    border-color: rgba(167, 139, 250, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(167, 139, 250, 0.15);
   }
   .uploader-avatar {
     width: 20px; height: 20px;
@@ -711,10 +715,135 @@
     font-size: 10px;
     flex-shrink: 0;
     box-shadow: 0 2px 6px rgba(167, 139, 250, 0.25);
+    overflow: hidden;
+  }
+  .uploader-avatar img {
+    width: 100%; height: 100%;
+    object-fit: cover;
   }
   .uploader-name {
     font-weight: 500;
     color: var(--text-secondary);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* User Detail Popup */
+  .user-detail-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    padding: 36px 32px 28px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: var(--shadow-lg), var(--shadow-glow);
+    animation: scale-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+  }
+  .detail-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+  }
+  .user-detail-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .detail-avatar {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: var(--gradient-primary);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800;
+    font-size: 32px;
+    box-shadow: 0 12px 32px rgba(167, 139, 250, 0.4);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    overflow: hidden;
+  }
+  .detail-avatar img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .detail-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+  .detail-username {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 14px;
+  }
+  .detail-role {
+    margin-bottom: 24px;
+  }
+  .detail-deleted-badge {
+    background: rgba(251, 113, 133, 0.1);
+    border: 1px solid rgba(251, 113, 133, 0.2);
+    color: var(--accent-rose);
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    margin-top: -8px;
+    margin-bottom: 16px;
+    display: inline-block;
+  }
+  .detail-fields {
+    width: 100%;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 4px 0;
+  }
+  .detail-field {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    text-align: left;
+  }
+  .detail-field:last-child { border-bottom: none; }
+  .detail-field-icon {
+    width: 32px; height: 32px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+  }
+  .detail-field-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .detail-field-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-tertiary);
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .detail-field-value {
+    font-size: 14px;
+    color: var(--text-primary);
+    word-break: break-word;
+  }
+  .detail-field-value.empty {
+    color: var(--text-muted);
+    font-style: italic;
   }
 
   /* Date column */
@@ -1395,6 +1524,267 @@
     color: var(--text-primary);
   }
 
+  /* manage-users button */
+  .manage-users-btn:hover {
+    background: rgba(96, 165, 250, 0.15);
+    color: var(--accent-blue);
+  }
+
+  /* Form select & disabled input */
+  .auth-field select {
+    padding: 12px 14px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
+  }
+  .auth-field select:focus {
+    border-color: var(--border-focus);
+    background-color: var(--bg-tertiary);
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1);
+  }
+  .auth-field input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .req { color: var(--accent-rose); margin-left: 2px; font-weight: 700; }
+  .auth-divider {
+    border-top: 1px solid var(--border-subtle);
+    margin: 4px 0;
+  }
+
+  /* Avatar Picker */
+  .avatar-picker {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    margin-bottom: 4px;
+  }
+  .avatar-preview {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: var(--gradient-primary);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800;
+    font-size: 24px;
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 4px 16px rgba(167, 139, 250, 0.3);
+    text-transform: uppercase;
+    border: 2px solid var(--border-default);
+  }
+  .avatar-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .avatar-preview.uploading::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+  }
+  .avatar-preview.uploading::before {
+    content: '⟳';
+    position: absolute;
+    color: white;
+    font-size: 24px;
+    z-index: 1;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .avatar-upload-btn {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    color: var(--text-primary);
+    padding: 8px 14px;
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  .avatar-upload-btn:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--accent-purple);
+    color: var(--accent-purple);
+  }
+  .avatar-remove-btn {
+    background: transparent;
+    border: 1px solid rgba(251, 113, 133, 0.2);
+    color: var(--accent-rose);
+    padding: 8px 14px;
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  .avatar-remove-btn:hover {
+    background: rgba(251, 113, 133, 0.12);
+    border-color: rgba(251, 113, 133, 0.4);
+  }
+
+  /* User Management Modal */
+  .users-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    padding: 28px;
+    width: 100%;
+    max-width: 760px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-lg), var(--shadow-glow);
+    animation: scale-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .users-table-wrap {
+    flex: 1;
+    overflow: auto;
+    margin-top: 4px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+  }
+  .users-loading, .users-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 13px;
+  }
+  .users-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .users-table thead {
+    background: var(--bg-tertiary);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .users-table th {
+    text-align: left;
+    padding: 12px 14px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .users-table th:last-child { text-align: right; }
+  .users-table td {
+    padding: 12px 14px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: middle;
+  }
+  .users-table tr:last-child td { border-bottom: none; }
+  .users-table tr:hover td { background: var(--bg-card-hover); }
+  .users-table .u-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+  }
+  .u-name-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .u-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--gradient-primary);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(167, 139, 250, 0.25);
+    text-transform: uppercase;
+  }
+  .u-avatar img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .users-table .u-username {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .users-table .u-email {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+  .users-table .u-phone {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .role-pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .role-pill.role-admin { color: var(--accent-amber); background: rgba(251, 191, 36, 0.1); border-color: rgba(251, 191, 36, 0.25); }
+  .role-pill.role-hr { color: var(--accent-blue); background: rgba(96, 165, 250, 0.1); border-color: rgba(96, 165, 250, 0.25); }
+  .role-pill.role-manager { color: var(--accent-purple); background: rgba(167, 139, 250, 0.1); border-color: rgba(167, 139, 250, 0.25); }
+  .role-pill.role-staff { color: var(--accent-green); background: rgba(74, 222, 128, 0.1); border-color: rgba(74, 222, 128, 0.25); }
+  .role-pill.role-other { color: var(--text-secondary); background: var(--bg-elevated); border-color: var(--border-default); }
+  .users-actions { white-space: nowrap; text-align: right; }
+  .u-action-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    margin-left: 4px;
+    transition: all var(--transition-fast);
+  }
+  .u-action-btn.u-edit { color: var(--accent-purple); border-color: rgba(167, 139, 250, 0.2); }
+  .u-action-btn.u-edit:hover { background: rgba(167, 139, 250, 0.12); border-color: rgba(167, 139, 250, 0.4); }
+  .u-action-btn.u-delete { color: var(--accent-rose); border-color: rgba(251, 113, 133, 0.2); }
+  .u-action-btn.u-delete:hover { background: rgba(251, 113, 133, 0.12); border-color: rgba(251, 113, 133, 0.4); }
+  .u-action-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .u-action-btn:disabled:hover { background: transparent; }
+
   /* Responsive */
   @media (max-width: 600px) {
     body { padding: 16px 12px; }
@@ -1438,16 +1828,46 @@
       <button class="modal-close" id="signupClose">×</button>
     </div>
     <form class="auth-form active" id="signupForm">
-      <div class="auth-field">
-        <label>Username</label>
-        <input type="text" id="signupUsername" autocomplete="off" placeholder="ตั้งชื่อผู้ใช้" />
+      <div class="avatar-picker" id="signupAvatarPicker">
+        <div class="avatar-preview" id="signupAvatarPreview">
+          <span id="signupAvatarLetter">+</span>
+        </div>
+        <button type="button" class="avatar-upload-btn" id="signupAvatarBtn">เลือกรูป</button>
+        <button type="button" class="avatar-remove-btn" id="signupAvatarRemove" style="display:none;">ลบรูป</button>
+        <input type="file" id="signupAvatarFile" accept="image/jpeg,image/png,image/webp" style="display:none;" />
       </div>
       <div class="auth-field">
-        <label>Password</label>
+        <label>Username <span class="req">*</span></label>
+        <input type="text" id="signupUsername" autocomplete="off" placeholder="ชื่อผู้ใช้สำหรับ login" />
+      </div>
+      <div class="auth-field">
+        <label>ชื่อ-นามสกุล <span class="req">*</span></label>
+        <input type="text" id="signupFullName" autocomplete="off" placeholder="ชื่อจริง นามสกุล" />
+      </div>
+      <div class="auth-field">
+        <label>Email <span class="req">*</span></label>
+        <input type="email" id="signupEmail" autocomplete="off" placeholder="example@email.com" />
+      </div>
+      <div class="auth-field">
+        <label>เบอร์โทร</label>
+        <input type="tel" id="signupPhone" autocomplete="off" placeholder="08x-xxx-xxxx" />
+      </div>
+      <div class="auth-field">
+        <label>บทบาท</label>
+        <select id="signupRole">
+          <option value="Staff">Staff</option>
+          <option value="HR">HR</option>
+          <option value="Manager">Manager</option>
+          <option value="Other">อื่นๆ</option>
+        </select>
+      </div>
+      <div class="auth-divider"></div>
+      <div class="auth-field">
+        <label>Password <span class="req">*</span></label>
         <input type="password" id="signupPassword" autocomplete="new-password" placeholder="อย่างน้อย 4 ตัว" />
       </div>
       <div class="auth-field">
-        <label>Password อีกครั้ง</label>
+        <label>ยืนยัน Password <span class="req">*</span></label>
         <input type="password" id="signupPassword2" autocomplete="new-password" placeholder="ยืนยันรหัสผ่าน" />
       </div>
       <button type="submit" class="auth-btn">สร้าง User</button>
@@ -1482,6 +1902,76 @@
   </div>
 </div>
 
+<!-- ===== User Management Modal (admin only) ===== -->
+<div class="signup-modal" id="usersModal">
+  <div class="users-card">
+    <div class="signup-header">
+      <h3>จัดการ Users</h3>
+      <button class="modal-close" id="usersClose">×</button>
+    </div>
+    <div class="users-table-wrap" id="usersTableWrap">
+      <div class="users-loading">กำลังโหลด...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Edit User Modal ===== -->
+<div class="signup-modal" id="editUserModal">
+  <div class="signup-card">
+    <div class="signup-header">
+      <h3>แก้ไขข้อมูล User</h3>
+      <button class="modal-close" id="editUserClose">×</button>
+    </div>
+    <form class="auth-form active" id="editUserForm">
+      <div class="avatar-picker" id="editAvatarPicker">
+        <div class="avatar-preview" id="editAvatarPreview">
+          <span id="editAvatarLetter">?</span>
+        </div>
+        <button type="button" class="avatar-upload-btn" id="editAvatarBtn">เปลี่ยนรูป</button>
+        <button type="button" class="avatar-remove-btn" id="editAvatarRemove" style="display:none;">ลบรูป</button>
+        <input type="file" id="editAvatarFile" accept="image/jpeg,image/png,image/webp" style="display:none;" />
+      </div>
+      <div class="auth-field">
+        <label>Username</label>
+        <input type="text" id="editUsername" disabled />
+      </div>
+      <div class="auth-field">
+        <label>ชื่อ-นามสกุล</label>
+        <input type="text" id="editFullName" autocomplete="off" />
+      </div>
+      <div class="auth-field">
+        <label>Email</label>
+        <input type="email" id="editEmail" autocomplete="off" />
+      </div>
+      <div class="auth-field">
+        <label>เบอร์โทร</label>
+        <input type="tel" id="editPhone" autocomplete="off" />
+      </div>
+      <div class="auth-field">
+        <label>บทบาท</label>
+        <select id="editRole">
+          <option value="Staff">Staff</option>
+          <option value="HR">HR</option>
+          <option value="Manager">Manager</option>
+          <option value="Other">อื่นๆ</option>
+        </select>
+      </div>
+      <button type="submit" class="auth-btn">บันทึก</button>
+      <p class="auth-hint" id="editUserHint"></p>
+    </form>
+  </div>
+</div>
+
+<!-- ===== User Detail Popup ===== -->
+<div class="signup-modal" id="userDetailModal">
+  <div class="user-detail-card">
+    <button class="modal-close detail-close" id="userDetailClose">×</button>
+    <div class="user-detail-content" id="userDetailContent">
+      <!-- ใส่เนื้อหาตอน open -->
+    </div>
+  </div>
+</div>
+
 <div class="container">
 
   <div class="header">
@@ -1499,6 +1989,14 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </button>
+        <button class="user-menu-btn manage-users-btn" id="manageUsersBtn" title="จัดการ users" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
           </svg>
         </button>
         <button class="user-menu-btn add-user-btn" id="addUserBtn" title="เพิ่ม user ใหม่" style="display:none;">
@@ -1675,9 +2173,16 @@
     setSession(username);
     document.getElementById('userName').textContent = username;
     document.getElementById('userAvatar').textContent = (username || '?').charAt(0).toUpperCase();
-    // แสดงปุ่ม "เพิ่ม user" เฉพาะ admin
-    document.getElementById('addUserBtn').style.display = (username === ADMIN_USER.username) ? 'flex' : 'none';
+    // แสดงปุ่ม admin เฉพาะตอน login เป็น admin
+    const isAdmin = (username === ADMIN_USER.username);
+    document.getElementById('addUserBtn').style.display = isAdmin ? 'flex' : 'none';
+    document.getElementById('manageUsersBtn').style.display = isAdmin ? 'flex' : 'none';
     hideAuthOverlay();
+    // โหลด user cache สำหรับแสดงชื่อใน pill
+    loadUserCache().then(() => {
+      // re-render ตารางถ้ามี data แล้ว เพื่อให้ pill แสดงชื่อใหม่
+      if (state.records && state.records.length) renderResults();
+    });
   }
 
   // ===== Login =====
@@ -1714,19 +2219,102 @@
     throw new Error('username หรือ password ไม่ถูกต้อง');
   }
 
+  // ===== Avatar utilities =====
+  // Resize image to max 400x400 (preserve aspect ratio) → JPEG blob
+  async function resizeImage(file, maxSize = 400, quality = 0.85) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        // คำนวณขนาดใหม่ ย่อให้ด้านยาวสุดไม่เกิน maxSize
+        if (width > height && width > maxSize) {
+          height = (height * maxSize) / width;
+          width = maxSize;
+        } else if (height > maxSize) {
+          width = (width * maxSize) / height;
+          height = maxSize;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        // คุณภาพดีขึ้นด้วย image smoothing
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(blob => {
+          if (blob) resolve(blob);
+          else reject(new Error('แปลงรูปไม่ได้'));
+        }, 'image/jpeg', quality);
+      };
+      img.onerror = () => reject(new Error('โหลดรูปไม่ได้'));
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  // อัพโหลดรูปไปยัง Supabase Storage → คืน path
+  async function uploadAvatar(username, blob) {
+    if (!state.supabase) throw new Error('ระบบยังโหลดไม่เสร็จ');
+    // path: <username>/avatar.jpg (overwrite ได้ ด้วย upsert)
+    const path = `${username}/avatar.jpg`;
+    const { error } = await state.supabase.storage
+      .from('user-avatars')
+      .upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+    if (error) throw error;
+    return path;
+  }
+
+  // ลบรูป avatar
+  async function deleteAvatar(path) {
+    if (!path || !state.supabase) return;
+    try {
+      await state.supabase.storage.from('user-avatars').remove([path]);
+    } catch (e) { /* ignore */ }
+  }
+
+  // คืน public URL ของ avatar (พร้อม cache buster)
+  function getAvatarUrl(path) {
+    if (!path || !state.supabase) return '';
+    const { data } = state.supabase.storage.from('user-avatars').getPublicUrl(path);
+    if (!data?.publicUrl) return '';
+    // Cache bust ด้วย timestamp ของ user (เพื่อให้รูปใหม่แสดงเมื่อ update)
+    const cb = userCacheBust[path] || '';
+    return cb ? `${data.publicUrl}?t=${cb}` : data.publicUrl;
+  }
+  // Cache bust map: path → timestamp (อัพเดตเมื่อ upload ใหม่)
+  const userCacheBust = {};
+
+  // Validate รูปก่อนใช้
+  function validateImageFile(file) {
+    if (!file) throw new Error('ไม่ได้เลือกรูป');
+    if (!file.type.match(/^image\/(jpeg|png|webp)$/)) {
+      throw new Error('รับเฉพาะ JPG, PNG, WebP');
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error('ไฟล์ใหญ่เกิน 5MB');
+    }
+  }
+
   // ===== Sign up =====
-  async function trySignup(username, password, password2) {
-    username = username.trim();
+  async function trySignup(payload) {
+    const username = (payload.username || '').trim();
+    const fullName = (payload.fullName || '').trim();
+    const email = (payload.email || '').trim();
+    const phone = (payload.phone || '').trim();
+    const role = (payload.role || 'Staff').trim();
+    const password = payload.password || '';
+    const password2 = payload.password2 || '';
+
     if (!username) throw new Error('กรุณาตั้ง username');
     if (username.length < 3) throw new Error('username ต้องมีอย่างน้อย 3 ตัวอักษร');
     if (!/^[a-zA-Z0-9_-]+$/.test(username)) throw new Error('username ใช้ได้แค่ a-z, 0-9, _, -');
-    if (username === ADMIN_USER.username) throw new Error('username นี้ใช้ไม่ได้');
+    if (!fullName) throw new Error('กรุณากรอกชื่อ-นามสกุล');
+    if (!email) throw new Error('กรุณากรอก email');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('รูปแบบ email ไม่ถูกต้อง');
     if (!password || password.length < 4) throw new Error('password ต้องมีอย่างน้อย 4 ตัว');
     if (password !== password2) throw new Error('password ทั้งสองช่องไม่ตรงกัน');
 
     if (!state.supabase) throw new Error('ระบบยังโหลดไม่เสร็จ ลองอีกครั้ง');
 
-    // เช็คซ้ำ
     const { data: exist } = await state.supabase
       .from('users')
       .select('username')
@@ -1735,11 +2323,31 @@
     if (exist) throw new Error('username นี้มีคนใช้แล้ว');
 
     const passwordHash = await hashPassword(password);
+
+    // Insert user ก่อน (ยังไม่มี avatar_path)
     const { error } = await state.supabase.from('users').insert({
       username,
-      password_hash: passwordHash
+      password_hash: passwordHash,
+      full_name: fullName,
+      email,
+      phone,
+      role,
+      avatar_path: ''
     });
     if (error) throw new Error(error.message);
+
+    // ถ้ามี avatar — อัพโหลด แล้ว update path
+    if (payload.avatarBlob) {
+      try {
+        const path = await uploadAvatar(username, payload.avatarBlob);
+        userCacheBust[path] = Date.now(); // cache bust
+        await state.supabase.from('users').update({ avatar_path: path }).eq('username', username);
+      } catch (e) {
+        console.error('อัพโหลด avatar ไม่ได้:', e);
+        // ไม่ throw — สมัครสำเร็จแล้ว แค่ไม่มีรูป
+      }
+    }
+
     return username;
   }
 
@@ -1788,11 +2396,257 @@
     }
   }
 
+  // ===== User management (admin only) =====
+  // Cache user details — โหลดครั้งเดียว ใช้กับ pill ในตาราง
+  const userCache = {};
+  let userCacheLoaded = false;
+
+  async function loadUserCache(force = false) {
+    if (userCacheLoaded && !force) return;
+    if (!state.supabase) return;
+    try {
+      const { data, error } = await state.supabase
+        .from('users')
+        .select('username, full_name, email, phone, role, avatar_path');
+      if (error) throw error;
+      Object.keys(userCache).forEach(k => delete userCache[k]);
+      (data || []).forEach(u => { userCache[u.username] = u; });
+      userCacheLoaded = true;
+    } catch (err) {
+      console.error('โหลด user cache ไม่ได้:', err);
+    }
+  }
+
+  // ดึงชื่อแสดงผลจาก username (display name)
+  function getUploaderDisplayName(username) {
+    if (!username) return '';
+    if (username === ADMIN_USER.username && !userCache[username]) return 'Administrator';
+    const u = userCache[username];
+    return (u && u.full_name) ? u.full_name : username;
+  }
+
+  // เปิด popup รายละเอียด user
+  window.viewUserDetail = async function(username) {
+    if (!username) return;
+    const modal = document.getElementById('userDetailModal');
+    const content = document.getElementById('userDetailContent');
+
+    // Loading state
+    content.innerHTML = `
+      <div class="detail-avatar">${escapeUserHtml((username || '?').charAt(0).toUpperCase())}</div>
+      <div class="detail-name">กำลังโหลด...</div>
+    `;
+    modal.classList.add('show');
+
+    // โหลด user (ถ้ายังไม่มีใน cache)
+    if (!userCache[username] && username !== ADMIN_USER.username) {
+      try {
+        const { data } = await state.supabase
+          .from('users')
+          .select('username, full_name, email, phone, role')
+          .eq('username', username)
+          .maybeSingle();
+        if (data) userCache[username] = data;
+      } catch (e) { /* ignore */ }
+    }
+
+    const u = userCache[username];
+    const isAdmin = (username === ADMIN_USER.username);
+    const isDeleted = !u && !isAdmin;
+
+    const fullName = u?.full_name || (isAdmin ? 'Administrator' : username);
+    const email = u?.email || '';
+    const phone = u?.phone || '';
+    const role = isAdmin ? 'admin' : (u?.role || 'Other');
+    const initial = (fullName || username).charAt(0).toUpperCase();
+    const avatarUrl = u?.avatar_path ? getAvatarUrl(u.avatar_path) : '';
+    const avatarHtml = avatarUrl
+      ? `<img src="${escapeUserHtml(avatarUrl)}" alt="" />`
+      : escapeUserHtml(initial);
+
+    content.innerHTML = `
+      <div class="detail-avatar">${avatarHtml}</div>
+      <div class="detail-name">${escapeUserHtml(fullName)}</div>
+      <div class="detail-username">@${escapeUserHtml(username)}</div>
+      <div class="detail-role">
+        <span class="role-pill ${roleClass(role)}">${escapeUserHtml(role)}</span>
+      </div>
+      ${isDeleted ? '<div class="detail-deleted-badge">user นี้ถูกลบไปแล้ว</div>' : ''}
+      <div class="detail-fields">
+        <div class="detail-field">
+          <div class="detail-field-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+          </div>
+          <div class="detail-field-text">
+            <div class="detail-field-label">Email</div>
+            <div class="detail-field-value ${email ? '' : 'empty'}">${email ? escapeUserHtml(email) : 'ไม่ระบุ'}</div>
+          </div>
+        </div>
+        <div class="detail-field">
+          <div class="detail-field-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+          </div>
+          <div class="detail-field-text">
+            <div class="detail-field-label">เบอร์โทร</div>
+            <div class="detail-field-value ${phone ? '' : 'empty'}">${phone ? escapeUserHtml(phone) : 'ไม่ระบุ'}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  document.getElementById('userDetailClose').addEventListener('click', () => {
+    document.getElementById('userDetailModal').classList.remove('show');
+  });
+
+  document.getElementById('userDetailModal').addEventListener('click', ev => {
+    if (ev.target === document.getElementById('userDetailModal')) {
+      document.getElementById('userDetailModal').classList.remove('show');
+    }
+  });
+
+  async function listUsers() {
+    if (!state.supabase) throw new Error('ระบบยังโหลดไม่เสร็จ');
+    const { data, error } = await state.supabase
+      .from('users')
+      .select('username, full_name, email, phone, role, created_at')
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+
+  async function updateUser(username, changes) {
+    if (!state.supabase) throw new Error('ระบบยังโหลดไม่เสร็จ');
+    const safe = {
+      full_name: (changes.fullName || '').trim(),
+      email: (changes.email || '').trim(),
+      phone: (changes.phone || '').trim(),
+      role: (changes.role || 'Staff').trim()
+    };
+    if (!safe.full_name) throw new Error('ชื่อ-นามสกุลห้ามว่าง');
+    if (!safe.email) throw new Error('email ห้ามว่าง');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(safe.email)) throw new Error('รูปแบบ email ไม่ถูกต้อง');
+
+    // Avatar handling
+    if (changes.avatarBlob) {
+      // อัพรูปใหม่ → upload + set path
+      const path = await uploadAvatar(username, changes.avatarBlob);
+      safe.avatar_path = path;
+      userCacheBust[path] = Date.now();
+    } else if (changes.removeAvatar) {
+      // ลบรูปเก่า → set path ว่าง + ลบจาก storage
+      const oldUser = userCache[username];
+      if (oldUser?.avatar_path) await deleteAvatar(oldUser.avatar_path);
+      safe.avatar_path = '';
+    }
+
+    const { error } = await state.supabase
+      .from('users')
+      .update(safe)
+      .eq('username', username);
+    if (error) throw new Error(error.message);
+  }
+
+  async function deleteUser(username) {
+    if (!state.supabase) throw new Error('ระบบยังโหลดไม่เสร็จ');
+    if (username === currentUser) throw new Error('ลบบัญชีตัวเองไม่ได้');
+
+    // ลบ avatar ก่อน (ถ้ามี)
+    const u = userCache[username];
+    if (u?.avatar_path) await deleteAvatar(u.avatar_path);
+
+    const { error } = await state.supabase
+      .from('users')
+      .delete()
+      .eq('username', username);
+    if (error) throw new Error(error.message);
+  }
+
+  // ===== Avatar UI handlers =====
+  // Signup avatar
+  let signupPendingAvatar = null;
+
+  document.getElementById('signupAvatarBtn').addEventListener('click', () => {
+    document.getElementById('signupAvatarFile').click();
+  });
+
+  document.getElementById('signupAvatarFile').addEventListener('change', async ev => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    try {
+      validateImageFile(file);
+      const blob = await resizeImage(file);
+      signupPendingAvatar = blob;
+      // Preview
+      const url = URL.createObjectURL(blob);
+      const preview = document.getElementById('signupAvatarPreview');
+      preview.innerHTML = `<img src="${url}" alt="" />`;
+      document.getElementById('signupAvatarRemove').style.display = 'inline-block';
+    } catch (err) {
+      alert(err.message);
+      ev.target.value = '';
+    }
+  });
+
+  document.getElementById('signupAvatarRemove').addEventListener('click', () => {
+    signupPendingAvatar = null;
+    document.getElementById('signupAvatarFile').value = '';
+    document.getElementById('signupAvatarPreview').innerHTML = '<span id="signupAvatarLetter">+</span>';
+    document.getElementById('signupAvatarRemove').style.display = 'none';
+  });
+
+  // Edit user avatar
+  let editPendingAvatar = null;
+  let editRemoveAvatar = false;
+
+  document.getElementById('editAvatarBtn').addEventListener('click', () => {
+    document.getElementById('editAvatarFile').click();
+  });
+
+  document.getElementById('editAvatarFile').addEventListener('change', async ev => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    try {
+      validateImageFile(file);
+      const blob = await resizeImage(file);
+      editPendingAvatar = blob;
+      editRemoveAvatar = false;
+      const url = URL.createObjectURL(blob);
+      const preview = document.getElementById('editAvatarPreview');
+      preview.innerHTML = `<img src="${url}" alt="" />`;
+      document.getElementById('editAvatarRemove').style.display = 'inline-block';
+    } catch (err) {
+      alert(err.message);
+      ev.target.value = '';
+    }
+  });
+
+  document.getElementById('editAvatarRemove').addEventListener('click', () => {
+    editPendingAvatar = null;
+    editRemoveAvatar = true;
+    document.getElementById('editAvatarFile').value = '';
+    // แสดงตัวอักษรแทน
+    const username = document.getElementById('editUsername').value;
+    const fullName = document.getElementById('editFullName').value || username;
+    const initial = (fullName || '?').charAt(0).toUpperCase();
+    document.getElementById('editAvatarPreview').innerHTML = `<span>${escapeUserHtml(initial)}</span>`;
+    document.getElementById('editAvatarRemove').style.display = 'none';
+  });
+
   // ปุ่ม "เพิ่ม user" — เปิด signup modal (admin only)
   document.getElementById('addUserBtn').addEventListener('click', () => {
     document.getElementById('signupModal').classList.add('show');
     document.getElementById('signupHint').textContent = '';
     document.getElementById('signupForm').reset();
+    // reset avatar
+    signupPendingAvatar = null;
+    document.getElementById('signupAvatarPreview').innerHTML = '<span>+</span>';
+    document.getElementById('signupAvatarRemove').style.display = 'none';
     setTimeout(() => document.getElementById('signupUsername').focus(), 100);
   });
 
@@ -1884,15 +2738,22 @@
     hint.textContent = 'กำลังสร้าง user...';
     btn.disabled = true;
     try {
-      const newUsername = await trySignup(
-        document.getElementById('signupUsername').value,
-        document.getElementById('signupPassword').value,
-        document.getElementById('signupPassword2').value
-      );
+      const newUsername = await trySignup({
+        username: document.getElementById('signupUsername').value,
+        fullName: document.getElementById('signupFullName').value,
+        email: document.getElementById('signupEmail').value,
+        phone: document.getElementById('signupPhone').value,
+        role: document.getElementById('signupRole').value,
+        password: document.getElementById('signupPassword').value,
+        password2: document.getElementById('signupPassword2').value,
+        avatarBlob: signupPendingAvatar
+      });
       hint.className = 'auth-hint success';
       hint.textContent = `✓ สร้าง user "${newUsername}" สำเร็จ`;
       document.getElementById('signupForm').reset();
-      // ปิด modal หลัง 1.5 วิ
+      // refresh user cache + re-render table
+      await loadUserCache(true);
+      if (state.records && state.records.length) renderResults();
       setTimeout(() => {
         document.getElementById('signupModal').classList.remove('show');
       }, 1500);
@@ -1904,13 +2765,223 @@
     }
   });
 
-  // ESC ปิด signup/change-password modal
+  // ===== Manage Users (admin only) =====
+  function escapeUserHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function roleClass(role) {
+    const r = (role || '').toLowerCase();
+    if (r === 'hr') return 'role-hr';
+    if (r === 'manager') return 'role-manager';
+    if (r === 'staff') return 'role-staff';
+    return 'role-other';
+  }
+
+  async function renderUsersTable() {
+    const wrap = document.getElementById('usersTableWrap');
+    wrap.innerHTML = '<div class="users-loading">กำลังโหลด...</div>';
+    try {
+      const users = await listUsers();
+
+      // เพิ่ม row สำหรับ admin (ที่ไม่มีใน table) ถ้า admin ยังใช้ default
+      const hasAdminRow = users.some(u => u.username === ADMIN_USER.username);
+      const adminRow = !hasAdminRow ? [{
+        username: ADMIN_USER.username,
+        full_name: 'Administrator',
+        email: '—',
+        phone: '',
+        role: 'admin',
+        created_at: null,
+        _isVirtual: true
+      }] : [];
+      const all = [...adminRow, ...users.map(u => ({
+        ...u,
+        role: u.username === ADMIN_USER.username ? 'admin' : u.role
+      }))];
+
+      if (all.length === 0) {
+        wrap.innerHTML = '<div class="users-empty">ยังไม่มี user ในระบบ</div>';
+        return;
+      }
+
+      wrap.innerHTML = `
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>ผู้ใช้</th>
+              <th>ติดต่อ</th>
+              <th>บทบาท</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${all.map(u => {
+              const isMe = u.username === currentUser;
+              const isAdmin = u.username === ADMIN_USER.username;
+              const isVirtual = u._isVirtual;
+              const uInitial = ((u.full_name || u.username || '?')).charAt(0).toUpperCase();
+              const uAvatarUrl = u.avatar_path ? getAvatarUrl(u.avatar_path) : '';
+              const uAvatarHtml = uAvatarUrl
+                ? `<span class="u-avatar"><img src="${escapeUserHtml(uAvatarUrl)}" alt="" /></span>`
+                : `<span class="u-avatar">${escapeUserHtml(uInitial)}</span>`;
+              return `
+                <tr>
+                  <td>
+                    <div class="u-name-row">
+                      ${uAvatarHtml}
+                      <div>
+                        <div class="u-name">${escapeUserHtml(u.full_name || u.username)}</div>
+                        <div class="u-username">@${escapeUserHtml(u.username)}${isMe ? ' · คุณ' : ''}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="u-email">${escapeUserHtml(u.email || '—')}</div>
+                    ${u.phone ? `<div class="u-phone">${escapeUserHtml(u.phone)}</div>` : ''}
+                  </td>
+                  <td><span class="role-pill ${roleClass(u.role)}">${escapeUserHtml(u.role || 'Other')}</span></td>
+                  <td class="users-actions">
+                    <button class="u-action-btn u-edit"
+                      onclick="openEditUser('${escapeUserHtml(u.username)}')"
+                      ${isVirtual ? 'disabled title="admin ใช้ default ยังไม่ได้บันทึกใน DB"' : ''}>แก้ไข</button>
+                    <button class="u-action-btn u-delete"
+                      onclick="confirmDeleteUser('${escapeUserHtml(u.username)}')"
+                      ${(isMe || isAdmin) ? 'disabled' : ''}
+                      title="${isMe ? 'ลบบัญชีตัวเองไม่ได้' : (isAdmin ? 'ลบ admin ไม่ได้' : 'ลบ user')}">ลบ</button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    } catch (err) {
+      wrap.innerHTML = `<div class="users-empty" style="color:var(--accent-rose);">โหลดไม่ได้: ${escapeUserHtml(err.message)}</div>`;
+    }
+  }
+
+  // ปุ่ม "จัดการ users" — เปิด modal
+  document.getElementById('manageUsersBtn').addEventListener('click', () => {
+    document.getElementById('usersModal').classList.add('show');
+    renderUsersTable();
+  });
+
+  document.getElementById('usersClose').addEventListener('click', () => {
+    document.getElementById('usersModal').classList.remove('show');
+  });
+
+  document.getElementById('usersModal').addEventListener('click', ev => {
+    if (ev.target === document.getElementById('usersModal')) {
+      document.getElementById('usersModal').classList.remove('show');
+    }
+  });
+
+  // ===== Edit user modal =====
+  let editingUsername = null;
+
+  window.openEditUser = async function(username) {
+    if (!state.supabase) return;
+    const { data, error } = await state.supabase
+      .from('users')
+      .select('username, full_name, email, phone, role, avatar_path')
+      .eq('username', username)
+      .maybeSingle();
+    if (error || !data) {
+      alert('โหลดข้อมูลไม่ได้');
+      return;
+    }
+    editingUsername = username;
+    editPendingAvatar = null;
+    editRemoveAvatar = false;
+    document.getElementById('editUsername').value = data.username;
+    document.getElementById('editFullName').value = data.full_name || '';
+    document.getElementById('editEmail').value = data.email || '';
+    document.getElementById('editPhone').value = data.phone || '';
+    document.getElementById('editRole').value = data.role || 'Staff';
+    document.getElementById('editUserHint').textContent = '';
+    document.getElementById('editAvatarFile').value = '';
+
+    // แสดง avatar ปัจจุบัน
+    const preview = document.getElementById('editAvatarPreview');
+    if (data.avatar_path) {
+      const url = getAvatarUrl(data.avatar_path);
+      preview.innerHTML = `<img src="${escapeUserHtml(url)}" alt="" />`;
+      document.getElementById('editAvatarRemove').style.display = 'inline-block';
+    } else {
+      const initial = (data.full_name || data.username || '?').charAt(0).toUpperCase();
+      preview.innerHTML = `<span>${escapeUserHtml(initial)}</span>`;
+      document.getElementById('editAvatarRemove').style.display = 'none';
+    }
+
+    document.getElementById('editUserModal').classList.add('show');
+  };
+
+  document.getElementById('editUserClose').addEventListener('click', () => {
+    document.getElementById('editUserModal').classList.remove('show');
+  });
+
+  document.getElementById('editUserModal').addEventListener('click', ev => {
+    if (ev.target === document.getElementById('editUserModal')) {
+      document.getElementById('editUserModal').classList.remove('show');
+    }
+  });
+
+  document.getElementById('editUserForm').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const hint = document.getElementById('editUserHint');
+    const btn = ev.target.querySelector('.auth-btn');
+    hint.className = 'auth-hint';
+    hint.textContent = 'กำลังบันทึก...';
+    btn.disabled = true;
+    try {
+      await updateUser(editingUsername, {
+        fullName: document.getElementById('editFullName').value,
+        email: document.getElementById('editEmail').value,
+        phone: document.getElementById('editPhone').value,
+        role: document.getElementById('editRole').value,
+        avatarBlob: editPendingAvatar,
+        removeAvatar: editRemoveAvatar
+      });
+      hint.className = 'auth-hint success';
+      hint.textContent = '✓ บันทึกสำเร็จ';
+      // refresh cache + re-render table
+      await loadUserCache(true);
+      if (state.records && state.records.length) renderResults();
+      setTimeout(() => {
+        document.getElementById('editUserModal').classList.remove('show');
+        renderUsersTable(); // refresh
+      }, 1000);
+    } catch (err) {
+      hint.className = 'auth-hint error';
+      hint.textContent = '✗ ' + err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ลบ user
+  window.confirmDeleteUser = async function(username) {
+    if (!confirm(`ยืนยันลบ user "${username}"?`)) return;
+    try {
+      await deleteUser(username);
+      await loadUserCache(true);
+      if (state.records && state.records.length) renderResults();
+      renderUsersTable();
+    } catch (err) {
+      alert('ลบไม่ได้: ' + err.message);
+    }
+  };
+
+
   document.addEventListener('keydown', ev => {
     if (ev.key === 'Escape') {
-      const sm = document.getElementById('signupModal');
-      const cm = document.getElementById('changePwdModal');
-      if (sm.classList.contains('show')) sm.classList.remove('show');
-      if (cm.classList.contains('show')) cm.classList.remove('show');
+      ['signupModal', 'changePwdModal', 'usersModal', 'editUserModal'].forEach(id => {
+        const m = document.getElementById(id);
+        if (m && m.classList.contains('show')) m.classList.remove('show');
+      });
     }
   });
 
@@ -2920,12 +3991,18 @@
               if (r.gender) infoBits.push(`<span class="info-bit">${highlight(r.gender, q)}</span>`);
               const infoStr = infoBits.length ? infoBits.join('<span class="bit-sep">·</span>') : '<span class="col-empty-text">—</span>';
 
-              const uploaderInitial = (r.uploadedBy || '?').charAt(0).toUpperCase();
+              const uploaderInitial = ((getUploaderDisplayName(r.uploadedBy) || '?')).charAt(0).toUpperCase();
+              const uploaderDisplay = getUploaderDisplayName(r.uploadedBy);
+              const uploaderUser = r.uploadedBy ? userCache[r.uploadedBy] : null;
+              const uploaderAvatarUrl = uploaderUser?.avatar_path ? getAvatarUrl(uploaderUser.avatar_path) : '';
+              const avatarHtml = uploaderAvatarUrl
+                ? `<span class="uploader-avatar"><img src="${escapeHtml(uploaderAvatarUrl)}" alt="" /></span>`
+                : `<span class="uploader-avatar">${escapeHtml(uploaderInitial)}</span>`;
               const uploaderHtml = r.uploadedBy
-                ? `<div class="uploader-pill" title="${escapeHtml(r.uploadedBy)}">
-                    <span class="uploader-avatar">${escapeHtml(uploaderInitial)}</span>
-                    <span class="uploader-name">${highlight(r.uploadedBy, q)}</span>
-                   </div>`
+                ? `<button type="button" class="uploader-pill" onclick="viewUserDetail('${escapeHtml(r.uploadedBy)}')" title="ดูรายละเอียด">
+                    ${avatarHtml}
+                    <span class="uploader-name">${highlight(uploaderDisplay, q)}</span>
+                   </button>`
                 : '<span class="col-empty-text">—</span>';
 
               return `
