@@ -6,6 +6,7 @@
 <title>CV Scanner — อัพโหลดและค้นหา</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -719,14 +720,36 @@
 
   <div class="sync-bar" id="syncBar">
     <div class="sync-status">
-      <span class="sync-dot connected"></span>
-      <span id="syncMessage">ข้อมูลเก็บในเบราว์เซอร์ของคุณ</span>
+      <span class="sync-dot" id="syncDot"></span>
+      <span id="syncMessage">ยังไม่ได้เชื่อมต่อ Supabase</span>
     </div>
-    <div style="display:flex;gap:6px;">
-      <button class="btn-link" id="exportBtn">ส่งออก JSON</button>
-      <button class="btn-link" id="importBtn">นำเข้า JSON</button>
-      <input type="file" id="importInput" accept=".json" style="display:none;" />
+    <button class="btn-link" id="syncSettingsBtn">ตั้งค่า ⚙</button>
+  </div>
+
+  <div class="sync-settings" id="syncSettings">
+    <h3>เชื่อมต่อ Supabase</h3>
+    <p class="sync-help">
+      วาง Project URL และ anon key เพื่อเก็บข้อมูลและไฟล์บน Supabase
+      <a href="#" id="syncHelpToggle">ดูวิธีหา ↓</a>
+    </p>
+    <div class="sync-instructions" id="syncInstructions">
+      <ol>
+        <li>เปิด <a href="https://supabase.com/dashboard" target="_blank">supabase.com/dashboard</a> → เข้า project</li>
+        <li>เมนูซ้าย → <b>⚙ Settings → API</b></li>
+        <li>คัดลอก <b>Project URL</b> (เช่น https://xxx.supabase.co) → วางในช่องแรก</li>
+        <li>คัดลอก <b>anon public</b> key (ยาวๆ ขึ้นต้น eyJ...) → วางในช่องที่สอง</li>
+        <li>ก่อนใช้ — ต้องสร้าง table และ storage bucket ตามคู่มือ supabase-setup-guide.md</li>
+      </ol>
     </div>
+    <div class="sync-input-row">
+      <input type="text" id="syncUrlInput" placeholder="Project URL: https://xxxxx.supabase.co" />
+      <input type="text" id="syncKeyInput" placeholder="anon key: eyJ..." />
+      <div style="display:flex;gap:8px;">
+        <button class="btn primary" id="syncConnectBtn">เชื่อมต่อ</button>
+        <button class="btn" id="syncDisconnectBtn" style="display:none;">ตัดการเชื่อมต่อ</button>
+      </div>
+    </div>
+    <p class="sync-note" id="syncNote"></p>
   </div>
 
   <label class="upload-zone" id="uploadZone">
@@ -849,8 +872,15 @@
     records: [],
     pending: null,
     editingId: null,
-    db: null   // IndexedDB instance
+    supabase: null,
+    config: null
   };
+
+  // โหลด config จาก localStorage
+  try {
+    const saved = localStorage.getItem('cvScannerSupabaseConfig');
+    if (saved) state.config = JSON.parse(saved);
+  } catch (e) { /* ignore */ }
 
   const $ = id => document.getElementById(id);
   const uploadZone = $('uploadZone');
@@ -858,165 +888,283 @@
   const statusEl = $('status');
   const previewCard = $('previewCard');
 
-  // ===== IndexedDB storage =====
-  // Schema:
-  //   - 'records' store: metadata ของ CV (key = id)
-  //   - 'files' store: ไฟล์ Blob (key = id, value = { blob, fileName, fileType })
-
-  function openDB() {
-    return new Promise((resolve, reject) => {
-      const req = indexedDB.open('cvScannerDB', 1);
-      req.onerror = () => reject(req.error);
-      req.onsuccess = () => resolve(req.result);
-      req.onupgradeneeded = ev => {
-        const db = ev.target.result;
-        if (!db.objectStoreNames.contains('records')) {
-          db.createObjectStore('records', { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains('files')) {
-          db.createObjectStore('files', { keyPath: 'id' });
-        }
-      };
-    });
+  // ===== Supabase sync =====
+  function setSyncStatus(statusType, message) {
+    const dot = $('syncDot');
+    const msg = $('syncMessage');
+    dot.className = 'sync-dot ' + (statusType || '');
+    msg.textContent = message;
   }
 
-  function dbTx(storeName, mode = 'readonly') {
-    return state.db.transaction(storeName, mode).objectStore(storeName);
+  function isConnected() {
+    return state.supabase !== null;
   }
 
-  function dbReq(req) {
-    return new Promise((resolve, reject) => {
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
+  async function initSupabase(config) {
+    if (!window.supabase) throw new Error('Supabase SDK ยังโหลดไม่เสร็จ ลองรีเฟรชหน้าเว็บ');
+    const client = window.supabase.createClient(config.url, config.key);
+    // ทดสอบเชื่อมต่อด้วยการ query table cvs
+    const { error } = await client.from('cvs').select('id').limit(1);
+    if (error) throw new Error(error.message);
+    state.supabase = client;
+    state.config = config;
   }
 
-  async function saveRecordToDB(record) {
-    // แยก file ออก เพื่อเก็บใน store ต่างหาก
-    const { file, ...meta } = record;
-    // เก็บ uploadedAt เป็น ISO string เพื่อ serialize ใน JSON ได้
-    if (meta.uploadedAt instanceof Date) {
-      meta.uploadedAt = meta.uploadedAt.toISOString();
-    }
-    await dbReq(dbTx('records', 'readwrite').put(meta));
-    if (file) {
-      await dbReq(dbTx('files', 'readwrite').put({
-        id: record.id,
-        blob: file,
-        fileName: record.fileName,
-        fileType: record.fileType
-      }));
-    }
-  }
-
-  async function deleteRecordFromDB(id) {
-    await dbReq(dbTx('records', 'readwrite').delete(id));
-    await dbReq(dbTx('files', 'readwrite').delete(id));
-  }
-
-  async function loadAllFromDB() {
-    const records = await dbReq(dbTx('records').getAll());
-    // เรียงจากใหม่ไปเก่า
-    records.sort((a, b) => {
-      const ta = new Date(a.uploadedAt).getTime();
-      const tb = new Date(b.uploadedAt).getTime();
-      return tb - ta;
-    });
-    return records.map(r => ({
-      ...r,
-      uploadedAt: r.uploadedAt ? new Date(r.uploadedAt) : new Date(),
-      file: null  // โหลด lazy ตอนกดดู
-    }));
-  }
-
-  async function loadFileFromDB(id) {
-    const fileRecord = await dbReq(dbTx('files').get(id));
-    if (!fileRecord) return null;
-    // คืน File object เพื่อใช้กับ pdf.js + download
-    return new File([fileRecord.blob], fileRecord.fileName, { type: fileRecord.blob.type });
-  }
-
-  async function initStorage() {
+  async function loadFromSupabase() {
+    if (!isConnected()) return;
+    setSyncStatus('syncing', 'กำลังโหลดข้อมูล...');
     try {
-      state.db = await openDB();
-      state.records = await loadAllFromDB();
+      const { data, error } = await state.supabase
+        .from('cvs')
+        .select('*')
+        .order('uploaded_at', { ascending: false });
+      if (error) throw error;
+
+      state.records = (data || []).map(r => ({
+        id: r.id,
+        name: r.name || '',
+        position: r.position || '',
+        email: r.email || '',
+        phone: r.phone || '',
+        age: r.age || '',
+        gender: r.gender || '',
+        note: r.note || '',
+        fileName: r.file_name || '',
+        filePath: r.file_path || '',
+        fileType: r.file_name?.toLowerCase().endsWith('.pdf') ? 'pdf' : 'docx',
+        hash: r.hash || '',
+        uploadedAt: r.uploaded_at ? new Date(r.uploaded_at) : new Date(),
+        file: null
+      }));
       renderResults();
-      $('syncMessage').textContent = `ข้อมูลเก็บในเบราว์เซอร์ของคุณ · ${state.records.length} รายการ`;
+      setSyncStatus('connected', `เชื่อมต่อแล้ว · ${state.records.length} รายการ`);
     } catch (err) {
-      console.error('IndexedDB error:', err);
-      $('syncMessage').textContent = 'เก็บข้อมูลไม่ได้: ' + err.message;
+      console.error(err);
+      setSyncStatus('error', 'โหลดข้อมูลไม่ได้: ' + err.message);
     }
   }
 
-  // ===== Export / Import JSON =====
-  $('exportBtn').addEventListener('click', async () => {
-    if (state.records.length === 0) {
-      showStatus('ยังไม่มีข้อมูลให้ส่งออก', 'error');
-      setTimeout(hideStatus, 2000);
+  async function syncCreate(record) {
+    if (!isConnected()) return null;
+    setSyncStatus('syncing', 'กำลังบันทึก...');
+    try {
+      let filePath = '';
+
+      // อัพโหลดไฟล์ไป Storage (ถ้ามี)
+      if (record.file) {
+        // path: <id>/<fileName>
+        filePath = `${record.id}/${record.fileName}`;
+        const { error: upErr } = await state.supabase.storage
+          .from('cv-files')
+          .upload(filePath, record.file, { upsert: true });
+        if (upErr) throw upErr;
+      }
+
+      // เก็บ metadata ใน table cvs
+      const { error } = await state.supabase.from('cvs').insert({
+        id: record.id,
+        name: record.name || '',
+        position: record.position || '',
+        email: record.email || '',
+        phone: record.phone || '',
+        age: record.age || '',
+        gender: record.gender || '',
+        note: record.note || '',
+        file_name: record.fileName || '',
+        file_path: filePath,
+        hash: record.hash || '',
+        uploaded_at: record.uploadedAt instanceof Date
+          ? record.uploadedAt.toISOString()
+          : record.uploadedAt
+      });
+      if (error) throw error;
+
+      record.filePath = filePath;
+      setSyncStatus('connected', `เชื่อมต่อแล้ว · ${state.records.length} รายการ`);
+      return record;
+    } catch (err) {
+      console.error(err);
+      setSyncStatus('error', 'บันทึกไม่ได้: ' + err.message);
+      return null;
+    }
+  }
+
+  async function syncUpdate(id, changes) {
+    if (!isConnected()) return;
+    setSyncStatus('syncing', 'กำลังอัพเดต...');
+    try {
+      const safeChanges = {
+        name: changes.name,
+        position: changes.position,
+        email: changes.email,
+        phone: changes.phone,
+        age: changes.age,
+        gender: changes.gender,
+        note: changes.note,
+        updated_at: new Date().toISOString()
+      };
+      // ตัด undefined ออก เพื่อไม่ให้ทับค่าเดิม
+      Object.keys(safeChanges).forEach(k => {
+        if (safeChanges[k] === undefined) delete safeChanges[k];
+      });
+
+      const { error } = await state.supabase
+        .from('cvs')
+        .update(safeChanges)
+        .eq('id', id);
+      if (error) throw error;
+      setSyncStatus('connected', `เชื่อมต่อแล้ว · ${state.records.length} รายการ`);
+    } catch (err) {
+      console.error(err);
+      setSyncStatus('error', 'อัพเดตไม่ได้: ' + err.message);
+    }
+  }
+
+  async function syncDelete(id) {
+    if (!isConnected()) return;
+    setSyncStatus('syncing', 'กำลังลบ...');
+    try {
+      const record = state.records.find(r => r.id === id);
+
+      // ลบไฟล์จาก Storage ก่อน (ถ้ามี)
+      if (record?.filePath) {
+        await state.supabase.storage.from('cv-files').remove([record.filePath]);
+      }
+
+      // ลบ row
+      const { error } = await state.supabase.from('cvs').delete().eq('id', id);
+      if (error) throw error;
+      setSyncStatus('connected', `เชื่อมต่อแล้ว · ${state.records.length} รายการ`);
+    } catch (err) {
+      console.error(err);
+      setSyncStatus('error', 'ลบไม่ได้: ' + err.message);
+    }
+  }
+
+  async function downloadFileFromStorage(record) {
+    if (record.file) return record.file;
+    if (!record.filePath || !isConnected()) return null;
+    const { data, error } = await state.supabase.storage
+      .from('cv-files')
+      .download(record.filePath);
+    if (error) throw error;
+    const file = new File([data], record.fileName, { type: data.type });
+    record.file = file;
+    return file;
+  }
+
+  // ===== Sync UI =====
+  $('syncSettingsBtn').addEventListener('click', () => {
+    $('syncSettings').classList.toggle('show');
+    if ($('syncSettings').classList.contains('show')) {
+      if (state.config) {
+        $('syncUrlInput').value = state.config.url || '';
+        $('syncKeyInput').value = state.config.key || '';
+      }
+      $('syncDisconnectBtn').style.display = isConnected() ? 'inline-block' : 'none';
+    }
+  });
+
+  $('syncHelpToggle').addEventListener('click', ev => {
+    ev.preventDefault();
+    $('syncInstructions').classList.toggle('show');
+  });
+
+  $('syncConnectBtn').addEventListener('click', async () => {
+    const url = $('syncUrlInput').value.trim();
+    const key = $('syncKeyInput').value.trim();
+    const note = $('syncNote');
+
+    if (!url || !key) {
+      note.className = 'sync-note error';
+      note.textContent = 'กรุณาวางทั้ง URL และ key';
       return;
     }
-    const data = state.records.map(r => ({
-      ...r,
-      uploadedAt: r.uploadedAt instanceof Date ? r.uploadedAt.toISOString() : r.uploadedAt,
-      file: undefined  // ไฟล์ไม่ถูกส่งออก
-    }));
-    const json = JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), records: data }, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `cv-data-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    showStatus(`ส่งออก ${data.length} รายการเรียบร้อย`, 'loading');
-    setTimeout(hideStatus, 2000);
-  });
-
-  $('importBtn').addEventListener('click', () => $('importInput').click());
-
-  $('importInput').addEventListener('change', async ev => {
-    const file = ev.target.files[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      const records = data.records || [];
-      if (!Array.isArray(records)) throw new Error('รูปแบบไฟล์ไม่ถูกต้อง');
-
-      let added = 0, skipped = 0;
-      for (const r of records) {
-        if (!r.id) continue;
-        // ข้ามถ้า id ซ้ำ
-        if (state.records.some(x => x.id === r.id)) {
-          skipped++;
-          continue;
-        }
-        const newRecord = {
-          ...r,
-          uploadedAt: r.uploadedAt ? new Date(r.uploadedAt) : new Date(),
-          file: null
-        };
-        state.records.unshift(newRecord);
-        await saveRecordToDB(newRecord);
-        added++;
-      }
-      renderResults();
-      let msg = `นำเข้า ${added} รายการ`;
-      if (skipped) msg += ` · ข้าม ${skipped} (ซ้ำกับที่มีอยู่)`;
-      showStatus(msg, 'loading');
-      setTimeout(hideStatus, 2500);
-      $('syncMessage').textContent = `ข้อมูลเก็บในเบราว์เซอร์ของคุณ · ${state.records.length} รายการ`;
-    } catch (err) {
-      showStatus('นำเข้าไม่ได้: ' + err.message, 'error');
-      setTimeout(hideStatus, 2500);
+    if (!url.includes('.supabase.co')) {
+      note.className = 'sync-note error';
+      note.textContent = 'URL ไม่ถูกต้อง — ต้องลงท้ายด้วย .supabase.co';
+      return;
     }
-    ev.target.value = '';
+    if (!key.startsWith('eyJ')) {
+      note.className = 'sync-note error';
+      note.textContent = 'anon key ไม่ถูกต้อง — ต้องขึ้นต้นด้วย eyJ';
+      return;
+    }
+
+    note.className = 'sync-note';
+    note.textContent = 'กำลังทดสอบการเชื่อมต่อ...';
+
+    try {
+      await initSupabase({ url, key });
+      localStorage.setItem('cvScannerSupabaseConfig', JSON.stringify({ url, key }));
+
+      note.className = 'sync-note success';
+      note.textContent = '✓ เชื่อมต่อสำเร็จ — กำลังโหลดข้อมูล...';
+      $('syncDisconnectBtn').style.display = 'inline-block';
+
+      const localOnly = state.records.filter(r => r.file);
+      await loadFromSupabase();
+
+      if (localOnly.length > 0) {
+        note.textContent = `กำลังอัพโหลด ${localOnly.length} รายการในเครื่อง...`;
+        for (const r of localOnly) {
+          if (!state.records.some(x => x.hash && x.hash === r.hash)) {
+            await syncCreate(r);
+            state.records.unshift(r);
+          }
+        }
+        renderResults();
+      }
+      note.textContent = `✓ เชื่อมต่อสำเร็จ · ${state.records.length} รายการ`;
+    } catch (err) {
+      console.error(err);
+      state.supabase = null;
+      note.className = 'sync-note error';
+      note.textContent = '✗ เชื่อมต่อไม่ได้: ' + err.message;
+      setSyncStatus('error', 'เชื่อมต่อไม่ได้');
+    }
   });
 
-  // เริ่มต้น: เปิด IndexedDB และโหลดข้อมูล
-  initStorage();
+  $('syncDisconnectBtn').addEventListener('click', () => {
+    if (!confirm('ตัดการเชื่อมต่อ Supabase? ข้อมูลใน Supabase ยังคงอยู่')) return;
+    localStorage.removeItem('cvScannerSupabaseConfig');
+    state.supabase = null;
+    state.config = null;
+    $('syncUrlInput').value = '';
+    $('syncKeyInput').value = '';
+    $('syncDisconnectBtn').style.display = 'none';
+    $('syncNote').className = 'sync-note';
+    $('syncNote').textContent = 'ตัดการเชื่อมต่อแล้ว';
+    setSyncStatus('', 'ยังไม่ได้เชื่อมต่อ Supabase');
+  });
+
+  // เริ่มต้น: ถ้ามี config → เชื่อมต่ออัตโนมัติ (รอ SDK โหลดเสร็จ)
+  function autoConnect() {
+    if (state.config) {
+      setSyncStatus('syncing', 'กำลังเชื่อมต่อ Supabase...');
+      initSupabase(state.config)
+        .then(() => loadFromSupabase())
+        .catch(err => {
+          console.error(err);
+          setSyncStatus('error', 'เชื่อมต่อไม่ได้ — เปิดตั้งค่าเพื่อตรวจสอบ');
+        });
+    } else {
+      setSyncStatus('', 'ยังไม่ได้เชื่อมต่อ Supabase');
+    }
+  }
+
+  if (window.supabase) {
+    autoConnect();
+  } else {
+    // รอ SDK โหลด
+    const checkSDK = setInterval(() => {
+      if (window.supabase) {
+        clearInterval(checkSDK);
+        autoConnect();
+      }
+    }, 100);
+    setTimeout(() => clearInterval(checkSDK), 10000); // timeout 10s
+  }
 
   // ===== Drag & drop =====
   ['dragenter', 'dragover'].forEach(e => {
@@ -1359,10 +1507,14 @@
     hideBatchPreview();
     renderResults();
 
-    // เก็บลง IndexedDB
-    for (const r of newRecords) await saveRecordToDB(r);
-    for (const r of updatedRecords) await saveRecordToDB(r);
-    $('syncMessage').textContent = `ข้อมูลเก็บในเบราว์เซอร์ของคุณ · ${state.records.length} รายการ`;
+    // sync ไปยัง Supabase (ถ้าเชื่อมต่อ)
+    if (isConnected()) {
+      for (const r of newRecords) await syncCreate(r);
+      for (const r of updatedRecords) {
+        // ถ้า hash เปลี่ยน (เช่น replace ไฟล์) — re-upload + update
+        await syncUpdate(r.id, r);
+      }
+    }
 
     const parts = [];
     if (saved) parts.push(`บันทึก ${saved} รายการ`);
@@ -1669,11 +1821,11 @@
       const editId = state.editingId;
       if (idx !== -1) {
         state.records[idx] = { ...state.records[idx], ...data };
-        await saveRecordToDB(state.records[idx]);
       }
       hidePreview();
       showStatus('แก้ไขเรียบร้อย', 'loading');
       renderResults();
+      if (isConnected()) await syncUpdate(editId, data);
     } else {
       const record = {
         id: 'r' + Date.now(),
@@ -1682,12 +1834,11 @@
         uploadedAt: state.pending?.uploadedAt || new Date()
       };
       state.records.unshift(record);
-      await saveRecordToDB(record);
       hidePreview();
       showStatus('บันทึกเรียบร้อย', 'loading');
       renderResults();
+      if (isConnected()) await syncCreate(record);
     }
-    $('syncMessage').textContent = `ข้อมูลเก็บในเบราว์เซอร์ของคุณ · ${state.records.length} รายการ`;
     setTimeout(hideStatus, 1500);
   });
 
@@ -1719,7 +1870,7 @@
     $('fileInfo').innerHTML = `
       <span>📄</span>
       <span class="file-name">${escapeHtml(record.fileName || '(ไม่มีไฟล์)')}</span>
-      ${record.fileName ? `<button class="file-link-btn" onclick="viewFile('${record.id}')">ดูไฟล์</button>` : ''}
+      ${(record.file || record.filePath) ? `<button class="file-link-btn" onclick="viewFile('${record.id}')">ดูไฟล์</button>` : ''}
       <span class="dot">·</span>
       <span class="upload-time">อัพโหลดเมื่อ ${formatDateTime(record.uploadedAt)}</span>
     `;
@@ -1795,7 +1946,7 @@
                   </td>
                   <td class="col-date" title="${escapeHtml(formatRelative(r.uploadedAt))}">${highlight(dateStr, q)}</td>
                   <td class="actions-cell">
-                    ${r.fileName ? `<button class="action-btn view-btn" onclick="viewFile('${r.id}')" title="${escapeHtml(r.fileName)}">ดู</button>` : ''}
+                    ${(r.file || r.filePath) ? `<button class="action-btn view-btn" onclick="viewFile('${r.id}')" title="${escapeHtml(r.fileName)}">ดู</button>` : ''}
                     <button class="action-btn edit-btn" onclick="editRecord('${r.id}')" title="แก้ไข">แก้ไข</button>
                     <button class="action-btn delete-btn" onclick="deleteRecord('${r.id}')" title="ลบ">ลบ</button>
                   </td>
@@ -1812,27 +1963,28 @@
     if (!confirm('ลบรายการนี้?')) return;
     state.records = state.records.filter(r => r.id !== id);
     renderResults();
-    await deleteRecordFromDB(id);
-    $('syncMessage').textContent = `ข้อมูลเก็บในเบราว์เซอร์ของคุณ · ${state.records.length} รายการ`;
+    if (isConnected()) await syncDelete(id);
   };
 
   window.viewFile = async function(id) {
     const record = state.records.find(r => r.id === id);
     if (!record) return;
 
-    // ถ้าไม่มี file ใน memory → โหลดจาก IndexedDB
+    // ถ้าไม่มี file ใน memory → โหลดจาก Supabase Storage
     if (!record.file) {
-      try {
-        const file = await loadFileFromDB(id);
-        if (!file) {
-          showStatus('ไม่พบไฟล์ต้นฉบับ', 'error');
-          setTimeout(hideStatus, 2000);
+      if (record.filePath && isConnected()) {
+        showStatus('กำลังโหลดไฟล์...', 'loading');
+        try {
+          await downloadFileFromStorage(record);
+          hideStatus();
+        } catch (err) {
+          showStatus('โหลดไฟล์ไม่ได้: ' + err.message, 'error');
+          setTimeout(hideStatus, 2500);
           return;
         }
-        record.file = file;
-      } catch (err) {
-        showStatus('โหลดไฟล์ไม่ได้: ' + err.message, 'error');
-        setTimeout(hideStatus, 2500);
+      } else {
+        showStatus('ไม่พบไฟล์ต้นฉบับ', 'error');
+        setTimeout(hideStatus, 2000);
         return;
       }
     }
@@ -1941,7 +2093,7 @@
     if (record) {
       record.note = value.trim();
       event.target.title = record.note;
-      await saveRecordToDB(record);
+      if (isConnected()) await syncUpdate(id, { note: record.note });
     }
   };
 
