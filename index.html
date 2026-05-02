@@ -876,10 +876,22 @@
     config: null
   };
 
-  // โหลด config จาก localStorage
+  // ===== Default Supabase config =====
+  // ค่าเริ่มต้น — ถ้าไม่มี config ใน localStorage จะใช้ค่านี้
+  // ผู้ใช้สามารถเปลี่ยนได้ผ่าน "ตั้งค่า ⚙"
+  const DEFAULT_SUPABASE_CONFIG = {
+    url: 'https://tbjwxjvodmqonohsuadm.supabase.co',
+    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiand4anZvZG1xb25vaHN1YWRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MzM4MzQsImV4cCI6MjA5MzMwOTgzNH0.rRsTBo9Z_Kh2Wx5B2roFkl1V0phb9ZANbuQiKMfeGgg'
+  };
+
+  // โหลด config จาก localStorage หรือใช้ default
   try {
     const saved = localStorage.getItem('cvScannerSupabaseConfig');
-    if (saved) state.config = JSON.parse(saved);
+    if (saved) {
+      state.config = JSON.parse(saved);
+    } else if (DEFAULT_SUPABASE_CONFIG.url && DEFAULT_SUPABASE_CONFIG.key) {
+      state.config = DEFAULT_SUPABASE_CONFIG;
+    }
   } catch (e) { /* ignore */ }
 
   const $ = id => document.getElementById(id);
